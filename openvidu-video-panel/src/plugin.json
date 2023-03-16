@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/master/docs/sources/developers/plugins/plugin.schema.json",
+  "type": "panel",
+  "name": "OpenVidu Video Panel",
+  "id": "openvidu-video-panel",
+  "info": {
+    "keywords": ["panel"],
+    "description": "Video panel plugin for grafana",
+    "author": {
+      "name": "OpenVidu"
+    },
+    "logos": {
+      "small": "img/openvidu.png",
+      "large": "img/openvidu.png"
+    },
+    "links": [],
+    "screenshots": [],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "dependencies": {
+    "grafanaDependency": ">=9.3.8",
+    "plugins": []
+  }
+}
