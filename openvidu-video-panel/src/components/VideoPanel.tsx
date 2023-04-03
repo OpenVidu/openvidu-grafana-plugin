@@ -1,13 +1,28 @@
-import { ArrayVector, BusEventWithPayload, DataHoverEvent, LegacyGraphHoverEvent, PanelProps, Vector } from '@grafana/data';
-import { getAppEvents } from '@grafana/runtime';
+import {
+  ArrayVector,
+  BusEventWithPayload,
+  DataFrame,
+  DataHoverClearEvent,
+  DataHoverEvent,
+  DataHoverPayload,
+  DataSelectEvent,
+  LegacyGraphHoverEvent,
+  LegacyGraphHoverEventPayload,
+  PanelProps,
+  Vector,
+} from '@grafana/data';
+import { RefreshEvent } from '@grafana/runtime';
 import React, { useEffect, useRef, useState } from 'react';
+import { Subscription, throttleTime } from 'rxjs';
 import { VideoOptions } from 'types';
 
 interface Props extends PanelProps<VideoOptions> {}
 
-class ZoomOutEvent extends BusEventWithPayload<any> {
-  static type = 'zoom-out';
+class MyHoverEvent extends BusEventWithPayload<DataHoverPayload> {
+  static type = 'data-hover';
 }
+
+
 export const VideoPanel: React.FC<Props> = ({
   options,
   data,
@@ -19,16 +34,18 @@ export const VideoPanel: React.FC<Props> = ({
   eventBus,
 }) => {
   // const theme = useTheme2();
-  // const datapoints = series.fields[1].values.toArray();
   // const styles = useStyles2(getStyles);
 
   // const url = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';//options.url;
-  // const url = 'public/plugins/openvidu-video-panel/videos/sample_metadata.mp4';
+  const url = 'public/plugins/openvidu-video-panel/videos/sample_metadata.mp4';
 
   const [timestampState, setTimestampState] = useState(-1);
   const [valueState, setValueState] = useState(-1);
 
-  const [startDate , setStartDate] = useState(timeRange.from.toDate());
+  const [isPlaying, setIsPlaying] = useState(false);
+  const videoRef: React.MutableRefObject<HTMLVideoElement> = useRef(null as any);
+
+  const [startDate, setStartDate] = useState(timeRange.from.toDate());
   const [endDate, setEndDate] = useState(timeRange.to.toDate());
 
   onChangeTimeRange = (timeRange: any) => {
@@ -36,44 +53,58 @@ export const VideoPanel: React.FC<Props> = ({
   };
 
   useEffect(() => {
-    getAppEvents()
-      .getStream(ZoomOutEvent)
-      .subscribe((event) => {
-        console.log(`Received event: ${event.type}`);
-      });
 
-    getAppEvents()
-      .getStream(LegacyGraphHoverEvent)
-      .subscribe((event) => {
-        console.log(`Received LegacyGraphHoverEvent event: ${event.type}`);
-      });
+    // const subscriber = eventBus.getStream(RefreshEvent).subscribe(event => {
+    //   console.log(`Received event: ${event.type}`);
+    // });
 
-    eventBus.getStream(DataHoverEvent).subscribe((event) => {
-      const series = event.payload.data;
-      let timeArray: Vector<any> = new ArrayVector();
-      let valueArray: Vector<any> = new ArrayVector();
+    // const subscriber2 = eventBus.getStream(DataHoverEvent).subscribe(event => {
+    //   console.log(`Received event: ${event.type}`);
+    // })
 
-      series?.fields.forEach((field) => {
-        if (field.type === 'time') {
-          timeArray = field.values;
-        } else if (field.type === 'number' && field.name.toLocaleLowerCase() !== 'y') {
-          valueArray = field.values;
-        }
-      });
+    // const subscriber3 = eventBus.getStream(LegacyGraphHoverEvent).subscribe(event => {
+    //   console.log(`Received event: ${event.type}`);
+    // })
 
+    const subs = new Subscription();
+    subs.add(
+      eventBus.getStream(MyHoverEvent).subscribe({
+        next: (e) => {
+          console.log('DataHoverEvent: ', e.payload);
+          const { data, rowIndex } = e.payload;
+          handleDataHoverEvent(data, rowIndex);
+        },
+      })
+    );
+    // subs.add(eventBus.getStream(DataHoverClearEvent).subscribe({ next: () => console.log('DataHoverClearEvent') }));
 
+    // subs.add(
+    //   eventBus.getStream(LegacyGraphHoverEvent).subscribe({
+    //     next: (e) => {
+    //       handleLegacyDataHoverEvent(e.payload);
+    //       console.log('LegacyGraphHoverEvent: ', e);
+    //     },
+    //   })
+    // );
 
-      if (series) {
-        const rowIndex = event.payload.rowIndex ?? 0;
-        // const columnIndex = event.payload.columnIndex;
+    subs.add(
+      eventBus.getStream(LegacyGraphHoverEvent).subscribe((e) => {
+        console.log('LegacyGraphHoverEvent: ', e);
+          handleLegacyDataHoverEvent(e.payload);
+        },
+      )
+    );
 
-        setTimestampState(timeArray.get(rowIndex));
-        setValueState(valueArray.get(rowIndex));
-      }
-    });
-  }, []);
+    // subs.add(eventBus.getStream(DataSelectEvent).subscribe({ next: () => console.log('DataSelectEvent') }));
 
-  // function for listening dashboard panel events
+    // subs.add(eventBus.getStream(ZoomOutEvent).subscribe({ next: () => console.log('ZoomOutEvent') }));
+
+    return () => {
+      subs.unsubscribe();
+      // subscriber.unsubscribe();
+      // subscriber2.unsubscribe();
+    };
+  }, [eventBus]);
 
   useEffect(() => {
     console.log('VideoPanel DATA: ', data);
@@ -82,10 +113,33 @@ export const VideoPanel: React.FC<Props> = ({
     console.warn('VideoPanel from: ', startDate);
     console.warn('VideoPanel to: ', endDate);
 
+    videoRef.current.currentTime = Math.random() * 10;
   }, [data, options, startDate, endDate]);
 
-  const [isPlaying, setIsPlaying] = useState(false);
-  const videoRef: React.MutableRefObject<HTMLVideoElement> = useRef(null as any);
+  function handleDataHoverEvent(series: DataFrame | undefined, rowIndex = 0) {
+    let timeArray: Vector<any> = new ArrayVector();
+    let valueArray: Vector<any> = new ArrayVector();
+
+    series?.fields.forEach((field) => {
+      if (field.type === 'time') {
+        timeArray = field.values;
+      } else if (field.type === 'number' && field.name.toLocaleLowerCase() !== 'y') {
+        valueArray = field.values;
+      }
+    });
+
+    if (series) {
+      // const columnIndex = event.payload.columnIndex;
+
+      setTimestampState(timeArray.get(rowIndex));
+      setValueState(valueArray.get(rowIndex));
+    }
+  }
+
+  function handleLegacyDataHoverEvent(data: LegacyGraphHoverEventPayload) {
+    setTimestampState(data?.point?.time ?? -1);
+    setValueState(data?.pos?.y ?? -1);
+  }
 
   function handlePlay() {
     videoRef.current?.play();
@@ -118,14 +172,11 @@ export const VideoPanel: React.FC<Props> = ({
       ) : (
         <div>
           <div>DATA event</div>
-          {/* <h3>Origin: {state.origin.path}</h3> */}
-          {/* <pre>{JSON.stringify(timestampState, null, '  ')}</pre> */}
-
           <div>Timestamp: {timestampState}</div>
           <div>Value: {renderValue(valueState)}</div>
+          <video ref={videoRef} src={url} width={width/2} height={height/2} />
         </div>
       )}
-      {/* <video ref={videoRef} src={url} width={width} height={height} /> */}
     </div>
   );
 };
