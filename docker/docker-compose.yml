@@ -10,6 +10,7 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=password
       - MYSQL_DATABASE=grafana_db
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/openvidu_dashboard.json
     ports:
       - "3306:3306"
     volumes:
@@ -21,12 +22,23 @@ services:
     image: grafana/grafana:8.5.22
     container_name: grafana
     restart: always
+    user: "$UID:$GID"
     ports:
       - "3000:3000"
     depends_on:
       - mysql
     network_mode: host
+    environment:
+      - MYSQL_URL=localhost:3306
+      - MYSQL_DATABASE=grafana_db
+      - MYSQL_PASSWORD=password
+      - MYSQL_USER=root
     volumes:
       - ../grafana/storage:/var/lib/grafana
       - ../grafana/custom.ini:/etc/grafana/grafana.ini
       - ../openvidu-video-panel:/var/lib/grafana/plugins
+      - ../grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ../grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ../grafana/dashboards:/var/lib/grafana/dashboards
+      - ../grafana/datasources:/var/lib/grafana/datasources
+
