@@ -1,32 +1,4 @@
 {
-  "__inputs": [],
-  "__elements": [],
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "8.5.22"
-    },
-    {
-      "type": "panel",
-      "id": "heatmap",
-      "name": "Heatmap",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "openvidu-video-panel",
-      "name": "OpenVidu Video Panel",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "timeseries",
-      "name": "Time series",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -52,7 +24,6 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": null,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -78,8 +49,8 @@
     },
     {
       "datasource": {
-        "type": "datasource",
-        "uid": "grafana"
+        "type": "mysql",
+        "uid": "P430005175C4C7810"
       },
       "fieldConfig": {
         "defaults": {
@@ -137,7 +108,7 @@
         "x": 12,
         "y": 0
       },
-      "id": 4,
+      "id": 10,
       "options": {
         "legend": {
           "calcs": [],
@@ -149,6 +120,34 @@
           "sort": "none"
         }
       },
+      "targets": [
+        {
+          "datasource": {
+            "type": "mysql",
+            "uid": "P430005175C4C7810"
+          },
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM metrics\n",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "table": "metrics",
+          "timeColumn": "*",
+          "timeColumnType": "datetime",
+          "where": []
+        }
+      ],
       "title": "Panel Title",
       "type": "timeseries"
     },
@@ -163,8 +162,8 @@
       },
       "dataFormat": "timeseries",
       "datasource": {
-        "type": "datasource",
-        "uid": "grafana"
+        "type": "mysql",
+        "uid": "P430005175C4C7810"
       },
       "gridPos": {
         "h": 8,
@@ -175,11 +174,45 @@
       "heatmap": {},
       "hideZeroBuckets": false,
       "highlightCards": true,
-      "id": 8,
+      "id": 12,
       "legend": {
         "show": false
       },
       "reverseYBuckets": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "mysql",
+            "uid": "P430005175C4C7810"
+          },
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM metrics",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "id"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "table": "alert",
+          "timeColumn": "eval_date",
+          "timeColumnType": "timestamp",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
       "title": "Panel Title",
       "tooltip": {
         "show": true,
@@ -211,6 +244,6 @@
   "timezone": "",
   "title": "openvidu_dashboard",
   "uid": "2xkhR8Y4k",
-  "version": 6,
+  "version": 2,
   "weekStart": ""
 }

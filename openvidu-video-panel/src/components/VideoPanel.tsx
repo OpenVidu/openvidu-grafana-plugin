@@ -37,7 +37,7 @@ export const VideoPanel: React.FC<Props> = ({
   // const styles = useStyles2(getStyles);
 
   // const url = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';//options.url;
-  const url = 'public/plugins/openvidu-video-panel/videos/sample_metadata.mp4';
+  const url = 'public/plugins/openvidu-video-panel/videos/sample.mp4';
 
   const [timestampState, setTimestampState] = useState(-1);
   const [valueState, setValueState] = useState(-1);
