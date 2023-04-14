@@ -9,14 +9,10 @@ BEGIN
 
     WHILE counter <= 600 DO
         INSERT INTO metrics (time, value)
-        VALUES (DATE_SUB(start_date, INTERVAL 5*(counter-1) SECOND), RAND()*100);
-        SET counter = counter + 1;
-    END WHILE;
+        VALUES (DATE_SUB(start_date, INTERVAL 10*(counter-1) SECOND), RAND()*100);
 
-    SET counter = 1;
-    WHILE counter <= 600 DO
         INSERT INTO video_metadata (time, value)
-        VALUES (DATE_SUB(start_date, INTERVAL 5*(counter-1) SECOND), SEC_TO_TIME(video_value));
+        VALUES (DATE_SUB(start_date, INTERVAL 10*(counter-1) SECOND), video_value);
 
         SET counter = counter + 1;
         SET video_value = video_value +1;
@@ -35,7 +31,7 @@ CREATE TABLE metrics (
 
 CREATE TABLE video_metadata (
   time DATETIME NOT NULL PRIMARY KEY,
-  value TIME
+  value INT
 );
 
 CALL generate_full_day_metrics();

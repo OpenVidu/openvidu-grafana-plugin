@@ -33,10 +33,8 @@ export const VideoPanel: React.FC<Props> = ({
   onChangeTimeRange,
   eventBus,
 }) => {
-  // const theme = useTheme2();
-  // const styles = useStyles2(getStyles);
+  //TODO: Improve all variables names
 
-  // const url = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';//options.url;
   const url = 'public/plugins/openvidu-video-panel/videos/sample.mp4';
 
   const [timestampState, setTimestampState] = useState(-1);
@@ -53,18 +51,9 @@ export const VideoPanel: React.FC<Props> = ({
   };
 
   useEffect(() => {
-
     // const subscriber = eventBus.getStream(RefreshEvent).subscribe(event => {
     //   console.log(`Received event: ${event.type}`);
     // });
-
-    // const subscriber2 = eventBus.getStream(DataHoverEvent).subscribe(event => {
-    //   console.log(`Received event: ${event.type}`);
-    // })
-
-    // const subscriber3 = eventBus.getStream(LegacyGraphHoverEvent).subscribe(event => {
-    //   console.log(`Received event: ${event.type}`);
-    // })
 
     const subs = new Subscription();
     subs.add(
@@ -78,24 +67,12 @@ export const VideoPanel: React.FC<Props> = ({
     );
     // subs.add(eventBus.getStream(DataHoverClearEvent).subscribe({ next: () => console.log('DataHoverClearEvent') }));
 
-    // subs.add(
-    //   eventBus.getStream(LegacyGraphHoverEvent).subscribe({
-    //     next: (e) => {
-    //       handleLegacyDataHoverEvent(e.payload);
-    //       console.log('LegacyGraphHoverEvent: ', e);
-    //     },
-    //   })
-    // );
-
     subs.add(
       eventBus.getStream(LegacyGraphHoverEvent).subscribe((e) => {
         console.log('LegacyGraphHoverEvent: ', e);
-          handleLegacyDataHoverEvent(e.payload);
-        },
-      )
+        handleLegacyDataHoverEvent(e.payload);
+      })
     );
-
-    // subs.add(eventBus.getStream(DataSelectEvent).subscribe({ next: () => console.log('DataSelectEvent') }));
 
     // subs.add(eventBus.getStream(ZoomOutEvent).subscribe({ next: () => console.log('ZoomOutEvent') }));
 
@@ -112,8 +89,6 @@ export const VideoPanel: React.FC<Props> = ({
 
     console.warn('VideoPanel from: ', startDate);
     console.warn('VideoPanel to: ', endDate);
-
-    videoRef.current.currentTime = Math.random() * 10;
   }, [data, options, startDate, endDate]);
 
   function handleDataHoverEvent(series: DataFrame | undefined, rowIndex = 0) {
@@ -131,8 +106,23 @@ export const VideoPanel: React.FC<Props> = ({
     if (series) {
       // const columnIndex = event.payload.columnIndex;
 
-      setTimestampState(timeArray.get(rowIndex));
-      setValueState(valueArray.get(rowIndex));
+      const timestamp = timeArray.get(rowIndex);
+      const value = valueArray.get(rowIndex);
+
+      if (timestamp) {
+        setTimestampState(timestamp);
+        setValueState(value);
+
+        const myPanelTimestampArray = data.series[0].fields[0].values.toArray();
+        const index = myPanelTimestampArray.indexOf(timestamp);
+
+        const myPanelValue = data.series[0].fields[1].values.toArray();
+        const secondsTimestamp = myPanelValue[myPanelValue.length - index];
+
+        if (secondsTimestamp && secondsTimestamp > 0) {
+          videoRef.current.currentTime = secondsTimestamp;
+        }
+      }
     }
   }
 
@@ -161,6 +151,13 @@ export const VideoPanel: React.FC<Props> = ({
     return value;
   }
 
+  function formatTimestamp(timestamp: number) {
+    // Format timestamp HH:mm:ss using Date
+    return new Date(timestamp).toLocaleTimeString('es-ES', {
+      hour12: false,
+    });
+  }
+
   return (
     <div className="video-panel" style={{ overflow: 'auto' }}>
       <div className="controls">
@@ -172,9 +169,9 @@ export const VideoPanel: React.FC<Props> = ({
       ) : (
         <div>
           <div>DATA event</div>
-          <div>Timestamp: {timestampState}</div>
+          <div>Timestamp: {formatTimestamp(timestampState)}</div>
           <div>Value: {renderValue(valueState)}</div>
-          <video ref={videoRef} src={url} width={width/2} height={height/2} />
+          <video ref={videoRef} src={url} width={width / 2} height={height / 2} />
         </div>
       )}
     </div>
