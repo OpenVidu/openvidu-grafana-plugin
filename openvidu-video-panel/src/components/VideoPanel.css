@@ -1,0 +1,28 @@
+.video-panel {
+  width: max-content;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.controls {
+  text-align: center;
+}
+
+.controls button {
+  color: #ffffff;
+}
+
+video::-webkit-media-controls-timeline {
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: block !important;
+
+}
+
+video::-webkit-media-controls-fullscreen-button,
+video::-webkit-media-controls-play-button,
+video::-webkit-media-controls-mute-button,
+video::-webkit-media-controls-toggle-closed-captions-button,
+video::-webkit-media-controls-volume-slider {
+  display: none;
+}

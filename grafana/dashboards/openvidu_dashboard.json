@@ -18,6 +18,21 @@
           "type": "dashboard"
         },
         "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "iconColor": "yellow",
+        "name": "OpenVidu Annotation",
+        "target": {
+          "limit": 100,
+          "matchAny": true,
+          "tags": [],
+          "type": "tags"
+        }
       }
     ]
   },
@@ -25,15 +40,15 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "links": [],
-  "liveNow": false,
+  "liveNow": true,
   "panels": [
     {
       "datasource": {
-        "type": "datasource",
-        "uid": "grafana"
+        "type": "mysql",
+        "uid": "P430005175C4C7810"
       },
       "gridPos": {
-        "h": 8,
+        "h": 10,
         "w": 12,
         "x": 0,
         "y": 0
@@ -44,6 +59,40 @@
         "showSeriesCount": false,
         "text": "Default value of text input option"
       },
+      "targets": [
+        {
+          "datasource": {
+            "type": "mysql",
+            "uid": "P430005175C4C7810"
+          },
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM video_metadata\n",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "id"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "table": "alert",
+          "timeColumn": "eval_date",
+          "timeColumnType": "timestamp",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
       "title": "Panel Title",
       "type": "openvidu-video-panel"
     },
@@ -230,6 +279,7 @@
       "yBucketBound": "auto"
     }
   ],
+  "refresh": false,
   "schemaVersion": 36,
   "style": "dark",
   "tags": [],
@@ -237,8 +287,8 @@
     "list": []
   },
   "time": {
-    "from": "now-6h",
-    "to": "now"
+    "from": "2023-04-14T07:36:49.000Z",
+    "to": "2023-04-14T10:56:29.000Z"
   },
   "timepicker": {},
   "timezone": "",
