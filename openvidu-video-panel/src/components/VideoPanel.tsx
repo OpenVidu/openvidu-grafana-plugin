@@ -1,13 +1,4 @@
-import {
-  ArrayVector,
-  DataFrame,
-  DataHoverClearEvent,
-  DataHoverEvent,
-  LegacyGraphHoverEvent,
-  LegacyGraphHoverEventPayload,
-  PanelProps,
-  Vector,
-} from '@grafana/data';
+import { ArrayVector, DataFrame, DataHoverEvent, PanelProps, Vector } from '@grafana/data';
 import { RefreshEvent } from '@grafana/runtime';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Subscription } from 'rxjs';
@@ -26,7 +17,8 @@ import SkipPreviousIcon from '@mui/icons-material/SkipPrevious';
 
 interface Props extends PanelProps<VideoOptions> {}
 interface AnnotationData {
-  // dashboardUID: '2xkhR8Y4k',
+  id?: number;
+  dashboardUID?: string;
   isRegion: boolean;
   time: number;
   timeEnd: number;
@@ -36,6 +28,7 @@ interface AnnotationData {
   text: string;
 }
 
+let videoProgressAnnotation: Partial<AnnotationData> = {};
 export const VideoPanel: React.FC<Props> = ({
   options,
   data,
@@ -51,7 +44,9 @@ export const VideoPanel: React.FC<Props> = ({
   const [timestampEvent, setTimestampEvent] = useState(-1);
   const [dataValueEvent, setDataValueEvent] = useState(-1);
 
-  const [annotations, setAnnotations] = useState<AnnotationData[]>([]);
+  const [annotations, setAnnotations] = useState<Array<Partial<AnnotationData>>>([]);
+
+  const [progressInterval, setProgressInterval] = useState<NodeJS.Timer>(null as any);
 
   const [isMyVideoPlaying, setIsMyVideoPlaying] = useState(false);
   const videoRef: React.MutableRefObject<HTMLVideoElement> = useRef(null as any);
@@ -60,10 +55,77 @@ export const VideoPanel: React.FC<Props> = ({
     console.log('onChangeTimeRange', timeRange);
   };
 
+  const refreshDashboard = useCallback(() => {
+    eventBus.publish(new RefreshEvent());
+  }, [eventBus]);
+
+  const createAnnotation = useCallback(
+    async (tags: string[]): Promise<Partial<AnnotationData>> => {
+      const myPanelDataTime = data.series[0].fields[0].values.toArray();
+      const currentIndex = Math.trunc(videoRef.current.currentTime);
+
+      const url = '/api/annotations';
+      const headers = {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      };
+      const annotationData: AnnotationData = {
+        dashboardUID: '2xkhR8Y4k',
+        isRegion: false,
+        time: timestampEvent === -1 ? myPanelDataTime[currentIndex] : timestampEvent,
+        timeEnd: timestampEvent === -1 ? myPanelDataTime[currentIndex] : timestampEvent,
+        tags,
+        dashboardId: 1,
+        panelId: 10,
+        text: '',
+      };
+      try {
+        const response = await axios.post(url, annotationData, { headers });
+        annotationData.id = response.data.id;
+        return annotationData;
+      } catch (error) {
+        console.log('error', error);
+        return {};
+      }
+    },
+    [data.series, timestampEvent]
+  );
+
+  const updateAnnotation = useCallback(
+    async (annotation: Partial<AnnotationData>, time: number): Promise<Partial<AnnotationData> | undefined> => {
+      const url = `/api/annotations/${annotation.id}`;
+      const headers = {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      };
+      const annotationData: Partial<AnnotationData> = {
+        time,
+        timeEnd: time,
+        text: annotation.text,
+        tags: annotation.tags,
+      };
+      try {
+        await axios.put(url, annotationData, { headers });
+        return annotationData;
+      } catch (error) {
+        console.log('error', error);
+        return undefined;
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     console.log('VideoPanel DATA: ', data);
     console.log('VideoPanel OPTIONS: ', options);
-  }, [data, options]);
+    console.log('VideoPanel TIME RANGE: ', timeRange);
+    const videoReference = videoRef.current;
+
+    return () => {
+      videoReference.pause();
+      console.log('VideoPanel unmounted');
+    };
+  }, [data, options, timeRange]);
 
   const setVideoTime = useCallback(
     (time: number | undefined = 0) => {
@@ -72,6 +134,9 @@ export const VideoPanel: React.FC<Props> = ({
     [videoRef]
   );
 
+  /**
+   * Set video time from timestamp panel hover event
+   */
   const setCurrentVideoTimeFromTimestampEvent = useCallback(
     (timestamp: any) => {
       const myPanelDataTime = data.series[0].fields[0].values.toArray();
@@ -87,7 +152,7 @@ export const VideoPanel: React.FC<Props> = ({
   );
 
   const handleDataHoverEvent = useCallback(
-    (series: DataFrame | undefined, rowIndex = 0) => {
+    async (series: DataFrame | undefined, rowIndex = 0) => {
       let timeArray: Vector<any> = new ArrayVector();
       let valueArray: Vector<any> = new ArrayVector();
 
@@ -107,16 +172,20 @@ export const VideoPanel: React.FC<Props> = ({
           setTimestampEvent(timestamp);
           setDataValueEvent(value);
           setCurrentVideoTimeFromTimestampEvent(timestamp);
+          // if (videoProgressAnnotation.id && videoProgressAnnotation.time !== timestamp) {
+          //   const annotation = await updateAnnotation(videoProgressAnnotation, timestamp);
+          //   videoProgressAnnotation.time = annotation?.time;
+          //   refreshDashboard();
+          // }
         }
       }
     },
     [setCurrentVideoTimeFromTimestampEvent]
   );
-  const handleLegacyDataHoverEvent = useCallback((data: LegacyGraphHoverEventPayload) => {
-    setTimestampEvent(data?.point?.time ?? -1);
-    setDataValueEvent(data?.pos?.y ?? -1);
-  }, []);
 
+  /**
+   * Subscribe to all necessary dashboard events
+   */
   useEffect(() => {
     const subs = new Subscription();
     // const subscriber = eventBus.getStream(RefreshEvent).subscribe(event => {
@@ -137,17 +206,17 @@ export const VideoPanel: React.FC<Props> = ({
       })
     );
 
-    subs.add(
-      eventBus.getStream(LegacyGraphHoverEvent).subscribe((e) => {
-        // console.log('LegacyGraphHoverEvent: ', e);
-        handleLegacyDataHoverEvent(e.payload);
-      })
-    );
+    // subs.add(
+    //   eventBus.getStream(LegacyGraphHoverEvent).subscribe((e) => {
+    //     // console.log('LegacyGraphHoverEvent: ', e);
+    //     handleLegacyDataHoverEvent(e.payload);
+    //   })
+    // );
 
     return () => {
       subs.unsubscribe();
     };
-  }, [eventBus, handleDataHoverEvent, handleLegacyDataHoverEvent]);
+  }, [eventBus, handleDataHoverEvent]);
 
   const forwardTenSeconds = useCallback(() => {
     setVideoTime(videoRef.current.currentTime + 10);
@@ -164,7 +233,7 @@ export const VideoPanel: React.FC<Props> = ({
     const elementIndex = myPanelDataValue.findIndex((value) => value === Math.trunc(videoRef.current.currentTime));
     const currentVideoTime = myPanelDataTime[myPanelDataTime.length - elementIndex];
 
-    const nextAnnotation = annotations.find((annotation) => annotation.time > currentVideoTime);
+    const nextAnnotation = annotations.find((annotation) => annotation.time ? annotation.time > currentVideoTime : false);
     if (nextAnnotation) {
       setCurrentVideoTimeFromTimestampEvent(nextAnnotation.time);
     }
@@ -177,8 +246,8 @@ export const VideoPanel: React.FC<Props> = ({
     const elementIndex = myPanelDataValue.findIndex((value) => value === Math.trunc(videoRef.current.currentTime));
     const currentVideoTime = myPanelDataTime[myPanelDataTime.length - elementIndex];
 
-    const filteredAnnotations = annotations.filter((annotation) => annotation.time < currentVideoTime);
-    const previousAnnotation: AnnotationData | undefined = filteredAnnotations.pop();
+    const filteredAnnotations = annotations.filter((annotation) => annotation.time ? annotation.time < currentVideoTime : false);
+    const previousAnnotation: Partial<AnnotationData> | undefined = filteredAnnotations.pop();
 
     if (previousAnnotation) {
       setCurrentVideoTimeFromTimestampEvent(previousAnnotation.time);
@@ -186,33 +255,49 @@ export const VideoPanel: React.FC<Props> = ({
     }
   }, [annotations, data.series, setCurrentVideoTimeFromTimestampEvent, videoRef]);
 
-  const handlePlay = useCallback(() => {
-    videoRef.current?.play();
-    setIsMyVideoPlaying(true);
-  }, [videoRef]);
+  /**
+   * This effect is used to update the video progress annotation when the video is playing
+   * And to clear the interval when the video is paused
+   */
+  const handleProgressAnnotation = useCallback(
+    (annotation: Partial<AnnotationData>) => {
+      const isTimerRunning = progressInterval !== null;
+
+      if (!isTimerRunning) {
+        const interval = setInterval(async () => {
+          const myPanelDataTime = data.series[0].fields[0].values.toArray();
+          const currentIndex = Math.trunc(videoRef.current.currentTime);
+          const time = myPanelDataTime[currentIndex];
+          updateAnnotation(videoProgressAnnotation, time).then((annotation) => {
+            videoProgressAnnotation.time = annotation?.time;
+            refreshDashboard();
+          });
+        }, 1000);
+        setProgressInterval(interval);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [videoRef, data.series, progressInterval, updateAnnotation, refreshDashboard, videoProgressAnnotation]
+  );
 
   const handlePause = useCallback(() => {
     videoRef.current?.pause();
     setIsMyVideoPlaying(false);
-  }, [videoRef]);
+    console.log('PAUSED VIDEO, CLEARING INTERVAL');
+    clearInterval(progressInterval);
+    setProgressInterval(null as any);
+  }, [videoRef, progressInterval]);
 
-  const renderValue = useCallback((value: any) => {
-    if (typeof value === 'number') {
-      return value.toFixed(2);
+  const handlePlay = useCallback(async () => {
+    videoRef.current?.play();
+    setIsMyVideoPlaying(true);
+
+    if (Object.keys(videoProgressAnnotation).length === 0) {
+      videoProgressAnnotation = await createAnnotation(['progress']);
     }
-    return value;
-  }, []);
-
-  const formatTimestamp = useCallback((timestamp: number) => {
-    // Format timestamp HH:mm:ss using Date
-    return new Date(timestamp).toLocaleTimeString('es-ES', {
-      hour12: false,
-    });
-  }, []);
-
-  const refreshDashboard = useCallback(() => {
-    eventBus.publish(new RefreshEvent());
-  }, [eventBus]);
+    handleProgressAnnotation(videoProgressAnnotation);
+    console.log('ANNOTATIONS', annotations);
+  }, [videoRef, createAnnotation, handleProgressAnnotation, annotations]);
 
   const findAnnotation = useCallback(async (): Promise<AnnotationData[]> => {
     const url = '/api/annotations';
@@ -223,7 +308,6 @@ export const VideoPanel: React.FC<Props> = ({
 
     try {
       const response = await axios.get(url, { headers });
-      console.log('response', response);
       return response.data;
     } catch (error) {
       console.log('error', error);
@@ -231,52 +315,35 @@ export const VideoPanel: React.FC<Props> = ({
     }
   }, []);
 
-  const createAnnotation = useCallback(async (): Promise<void> => {
-    const url = '/api/annotations';
-    const headers = {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    };
-    const data: AnnotationData = {
-      // dashboardUID: '2xkhR8Y4k',
-      isRegion: false,
-      time: timestampEvent,
-      timeEnd: 0,
-      tags: ['openvidu'],
-      dashboardId: 1,
-      panelId: 10,
-      text: 'Test Annotation',
-    };
-
-    try {
-      const response = await axios.post(url, data, { headers });
-      console.log('response', response);
-      setAnnotations([...annotations, response.data]);
-      refreshDashboard();
-    } catch (error) {
-      console.log('error', error);
-    }
-  }, [timestampEvent, annotations, refreshDashboard]);
-
+  /**
+   * Load annotations on component mount
+   */
   useEffect(() => {
     findAnnotation().then((annotations) => {
+      videoProgressAnnotation = annotations.find((annotation) => annotation.tags.includes('progress')) || {};
       setAnnotations(annotations);
     });
 
     return () => {
       setAnnotations([]);
     };
-  }, [findAnnotation]);
+  }, [findAnnotation, progressInterval]);
+
+  /**
+   * Delete video progress annotation on component unmount
+   */
+  useEffect(() => {
+    return () => {
+      clearInterval(progressInterval);
+    };
+  }, [progressInterval]);
 
   return (
     <div className="video-panel">
       {!timestampEvent || !dataValueEvent ? (
         <div>NO DATA event</div>
       ) : (
-
         <div>
-          {/* <div>Timestamp: {formatTimestamp(timestampEvent)}</div>
-          <div>Value: {renderValue(dataValueEvent)}</div> */}
           <video
             ref={videoRef}
             src={videoUrl}
@@ -287,6 +354,10 @@ export const VideoPanel: React.FC<Props> = ({
             controlsList="nodownload noplaybackrate"
             onPlaying={() => setIsMyVideoPlaying(true)}
             onPause={() => setIsMyVideoPlaying(false)}
+            onEnded={() => {
+              clearInterval(progressInterval);
+              setIsMyVideoPlaying(false);
+            }}
           />
           <div className="controls">
             <Tooltip title="Rewind 10 seconds">
@@ -318,7 +389,17 @@ export const VideoPanel: React.FC<Props> = ({
             </Tooltip>
 
             <Tooltip title="Add mark">
-              <IconButton color="secondary" onClick={createAnnotation} size="large">
+              <IconButton
+                color="secondary"
+                onClick={async () => {
+                  const annotation = await createAnnotation(['openvidu']);
+                  if (annotation) {
+                    setAnnotations([...annotations, annotation]);
+                    refreshDashboard();
+                  }
+                }}
+                size="large"
+              >
                 <FlagIcon fontSize="inherit" />
               </IconButton>
             </Tooltip>
