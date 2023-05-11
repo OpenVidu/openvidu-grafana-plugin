@@ -77,7 +77,7 @@ export const VideoPanel: React.FC<Props> = ({
         tags,
         dashboardId: 1,
         panelId: 10,
-        text: '',
+        text: `Annontation ${tags[0]}`,
       };
       try {
         const response = await axios.post(url, annotationData, { headers });
@@ -296,8 +296,8 @@ export const VideoPanel: React.FC<Props> = ({
       videoProgressAnnotation = await createAnnotation(['progress']);
     }
     handleProgressAnnotation(videoProgressAnnotation);
-    console.log('ANNOTATIONS', annotations);
-  }, [videoRef, createAnnotation, handleProgressAnnotation, annotations]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoRef, createAnnotation, handleProgressAnnotation, videoProgressAnnotation]);
 
   const findAnnotation = useCallback(async (): Promise<AnnotationData[]> => {
     const url = '/api/annotations';
