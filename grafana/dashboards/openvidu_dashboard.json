@@ -2,22 +2,22 @@
   "annotations": {
     "list": [
       {
-        "builtIn": 1,
         "datasource": {
-          "type": "grafana",
-          "uid": "-- Grafana --"
+          "type": "datasource",
+          "uid": "grafana"
         },
         "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
+        "hide": false,
+        "iconColor": "#e01e65",
+        "name": "Video Progress",
         "target": {
           "limit": 100,
           "matchAny": false,
-          "tags": [],
-          "type": "dashboard"
-        },
-        "type": "dashboard"
+          "tags": [
+            "progress"
+          ],
+          "type": "tags"
+        }
       },
       {
         "datasource": {
@@ -29,10 +29,30 @@
         "name": "OpenVidu Annotation",
         "target": {
           "limit": 100,
-          "matchAny": true,
-          "tags": [],
+          "matchAny": false,
+          "tags": [
+            "openvidu"
+          ],
           "type": "tags"
         }
+      },
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": false,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "tags"
+        },
+        "type": "dashboard"
       }
     ]
   },
@@ -152,7 +172,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
+        "h": 10,
         "w": 12,
         "x": 12,
         "y": 0
@@ -199,84 +219,6 @@
       ],
       "title": "Panel Title",
       "type": "timeseries"
-    },
-    {
-      "cards": {},
-      "color": {
-        "cardColor": "#b4ff00",
-        "colorScale": "sqrt",
-        "colorScheme": "interpolateOranges",
-        "exponent": 0.5,
-        "mode": "spectrum"
-      },
-      "dataFormat": "timeseries",
-      "datasource": {
-        "type": "mysql",
-        "uid": "P430005175C4C7810"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 8
-      },
-      "heatmap": {},
-      "hideZeroBuckets": false,
-      "highlightCards": true,
-      "id": 12,
-      "legend": {
-        "show": false
-      },
-      "reverseYBuckets": false,
-      "targets": [
-        {
-          "datasource": {
-            "type": "mysql",
-            "uid": "P430005175C4C7810"
-          },
-          "format": "time_series",
-          "group": [],
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "SELECT * FROM metrics",
-          "refId": "A",
-          "select": [
-            [
-              {
-                "params": [
-                  "id"
-                ],
-                "type": "column"
-              }
-            ]
-          ],
-          "table": "alert",
-          "timeColumn": "eval_date",
-          "timeColumnType": "timestamp",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        }
-      ],
-      "title": "Panel Title",
-      "tooltip": {
-        "show": true,
-        "showHistogram": false
-      },
-      "type": "heatmap",
-      "xAxis": {
-        "show": true
-      },
-      "yAxis": {
-        "format": "short",
-        "logBase": 1,
-        "show": true
-      },
-      "yBucketBound": "auto"
     }
   ],
   "refresh": false,
@@ -287,13 +229,13 @@
     "list": []
   },
   "time": {
-    "from": "2023-04-14T07:36:49.000Z",
-    "to": "2023-04-14T10:56:29.000Z"
+    "from": "2023-05-11T12:30:10.000Z",
+    "to": "2023-05-11T14:10:00.000Z"
   },
   "timepicker": {},
   "timezone": "",
   "title": "openvidu_dashboard",
   "uid": "2xkhR8Y4k",
-  "version": 2,
+  "version": 4,
   "weekStart": ""
 }
