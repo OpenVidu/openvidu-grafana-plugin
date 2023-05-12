@@ -4,16 +4,8 @@
   "description": "Video panel plugin for grafana",
   "scripts": {
     "build": "webpack -c ./.config/webpack/webpack.config.ts --env production",
-    "dev": "webpack -w -c ./.config/webpack/webpack.config.ts --env development",
-    "test": "jest --watch --onlyChanged",
-    "test:ci": "jest --passWithNoTests --maxWorkers 4",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint --cache --ignore-path ./.gitignore --ext .js,.jsx,.ts,.tsx .",
-    "lint:fix": "yarn lint --fix",
-    "e2e": "yarn cypress install && yarn grafana-e2e run",
-    "e2e:update": "yarn cypress install && yarn grafana-e2e run --update-screenshots",
-    "server": "docker-compose up --build",
-    "sign": "npx --yes @grafana/sign-plugin@latest"
+    "panel": "webpack -w -c ./.config/webpack/webpack.config.ts --env development",
+    "server": "cd ../docker && docker compose up"
   },
   "author": "Carlos Santos Morales - CSantosM",
   "license": "Apache-2.0",
