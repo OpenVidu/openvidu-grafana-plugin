@@ -13,9 +13,8 @@ services:
       - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/openvidu_dashboard.json
     ports:
       - "3306:3306"
-    volumes:
+    # volumes:
       # - ../mysql:/var/lib/mysql
-      - ../mysql/data.sql:/docker-entrypoint-initdb.d/data.sql
 
 
   grafana:
@@ -41,4 +40,21 @@ services:
       - ../grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ../grafana/dashboards:/var/lib/grafana/dashboards
       - ../grafana/datasources:/var/lib/grafana/datasources
+
+
+  db_initializer:
+    build:
+      context: ../mysql
+      dockerfile: Dockerfile
+    depends_on:
+      - mysql
+    container_name: db_initializer
+    restart: on-failure
+    network_mode: host
+    environment:
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_HOST=localhost
+      - DB_NAME=grafana_db
+      - VIDEOS_URL=https://s3.eu-west-1.amazonaws.com/public.openvidu.io/bbb_640x480.mkv,https://s3.eu-west-1.amazonaws.com/public.openvidu.io/bbb_640x480.mkv
 
