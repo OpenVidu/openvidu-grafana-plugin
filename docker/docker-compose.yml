@@ -56,5 +56,5 @@ services:
       - DB_PASSWORD=password
       - DB_HOST=localhost
       - DB_NAME=grafana_db
-      - VIDEOS_URL=https://s3.eu-west-1.amazonaws.com/public.openvidu.io/bbb_640x480.mkv,https://s3.eu-west-1.amazonaws.com/public.openvidu.io/bbb_640x480.mkv
+      - VIDEOS_URL=https://s3.eu-west-1.amazonaws.com/public.openvidu.io/bbb_640x480.mkv,https://s3.eu-west-1.amazonaws.com/public.openvidu.io/fakevideo_h264_opus.mkv
 
