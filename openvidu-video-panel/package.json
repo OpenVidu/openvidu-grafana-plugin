@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Video panel plugin for grafana",
   "scripts": {
-    "build": "webpack -c ./.config/webpack/webpack.config.ts --env production",
+    "dev": "webpack -c ./.config/webpack/webpack.config.ts --env production",
     "panel": "webpack -w -c ./.config/webpack/webpack.config.ts --env development",
     "server": "cd ../docker && docker compose up"
   },

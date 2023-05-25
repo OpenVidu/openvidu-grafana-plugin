@@ -43,7 +43,6 @@ export const VideoPanel: React.FC<Props> = ({
 }) => {
   const [videoUrl, setVideoUrl] = useState('');
   const [timestampEvent, setTimestampEvent] = useState(-1);
-  const [dataValueEvent, setDataValueEvent] = useState(-1);
 
   const [annotations, setAnnotations] = useState<Array<Partial<AnnotationData>>>([]);
 
@@ -245,8 +244,9 @@ export const VideoPanel: React.FC<Props> = ({
 
         if (timestamp) {
           setTimestampEvent(timestamp);
-          setDataValueEvent(value);
-          setCurrentVideoTimeFromTimestampEvent(timestamp);
+          const url = getVideoUrlByTimestamp(timestamp);
+          setCurrentVideoTimeFromTimestampEvent(timestamp, url);
+
         }
       }
     },
@@ -474,9 +474,6 @@ export const VideoPanel: React.FC<Props> = ({
 
   return (
     <div className="video-panel">
-      {!timestampEvent || !dataValueEvent ? (
-        <div>NO DATA event</div>
-      ) : (
         <div>
           <video
             ref={videoRef}
@@ -536,7 +533,6 @@ export const VideoPanel: React.FC<Props> = ({
             </Tooltip>
           </div>
         </div>
-      )}
     </div>
   );
 };
