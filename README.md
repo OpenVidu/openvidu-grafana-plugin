@@ -95,6 +95,7 @@ Once every service is ready, you can access to the grafana dashboad on [localhos
 
 ## Video sample
 
+<a href="docs/openvidu-grafana.mp4">Download</a> 
 
 <video controls>
   <source src="docs/openvidu-grafana.mp4" type="video/mp4">
