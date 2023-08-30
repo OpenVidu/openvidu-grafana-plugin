@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "Video panel plugin for grafana",
   "scripts": {
-    "dev": "webpack -c ./.config/webpack/webpack.config.ts --env production",
-    "panel": "webpack -w -c ./.config/webpack/webpack.config.ts --env development",
+    "build": "webpack -c ./.config/webpack/webpack.config.ts --env production",
+    "dev": "webpack -w -c ./.config/webpack/webpack.config.ts --env development",
     "server": "cd ../docker && docker compose up"
   },
   "author": "Carlos Santos Morales - CSantosM",

@@ -228,19 +228,19 @@ export const VideoPanel: React.FC<Props> = ({
   const handleDataHoverEvent = useCallback(
     async (series: DataFrame | undefined, rowIndex = 0) => {
       let timeArray: Vector<any> = new ArrayVector();
-      let valueArray: Vector<any> = new ArrayVector();
+      // let valueArray: Vector<any> = new ArrayVector();
 
       series?.fields.forEach((field) => {
         if (field.type === 'time') {
           timeArray = field.values;
         } else if (field.type === 'number' && field.name.toLocaleLowerCase() !== 'y') {
-          valueArray = field.values;
+          // valueArray = field.values;
         }
       });
 
       if (series) {
         const timestamp = timeArray.get(rowIndex);
-        const value = valueArray.get(rowIndex);
+        // const value = valueArray.get(rowIndex);
 
         if (timestamp) {
           setTimestampEvent(timestamp);
@@ -250,7 +250,7 @@ export const VideoPanel: React.FC<Props> = ({
         }
       }
     },
-    [setCurrentVideoTimeFromTimestampEvent]
+    [setCurrentVideoTimeFromTimestampEvent, getVideoUrlByTimestamp]
   );
 
   /**
