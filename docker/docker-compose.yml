@@ -6,13 +6,10 @@ services:
     image: mysql:latest
     container_name: mysql
     restart: always
-    network_mode: host
     environment:
       - MYSQL_ROOT_PASSWORD=password
       - MYSQL_DATABASE=grafana_db
       - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/openvidu_dashboard.json
-    ports:
-      - "3306:3306"
     # volumes:
       # - ../mysql:/var/lib/mysql
 
@@ -26,9 +23,8 @@ services:
       - "3000:3000"
     depends_on:
       - mysql
-    network_mode: host
     environment:
-      - MYSQL_URL=localhost:3306
+      - MYSQL_URL=mysql
       - MYSQL_DATABASE=grafana_db
       - MYSQL_PASSWORD=password
       - MYSQL_USER=root
@@ -50,11 +46,9 @@ services:
       - mysql
     container_name: db_initializer
     restart: on-failure
-    network_mode: host
     environment:
       - DB_USER=root
       - DB_PASSWORD=password
-      - DB_HOST=localhost
+      - DB_HOST=mysql
       - DB_NAME=grafana_db
       - VIDEOS_URL=https://s3.eu-west-1.amazonaws.com/public.openvidu.io/bbb_640x480.mkv,https://s3.eu-west-1.amazonaws.com/public.openvidu.io/fakevideo_h264_opus.mkv
-
