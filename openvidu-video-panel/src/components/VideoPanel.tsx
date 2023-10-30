@@ -38,7 +38,7 @@ export const VideoPanel: React.FC<Props> = ({
   timeZone,
   width,
   height,
-  onChangeTimeRange,
+  // onChangeTimeRange,
   eventBus,
 }) => {
   const [videoUrl, setVideoUrl] = useState('');
@@ -51,9 +51,9 @@ export const VideoPanel: React.FC<Props> = ({
   const [isMyVideoPlaying, setIsMyVideoPlaying] = useState(false);
   const videoRef: React.MutableRefObject<HTMLVideoElement> = useRef(null as any);
 
-  onChangeTimeRange = (timeRange: any) => {
-    console.log('onChangeTimeRange', timeRange);
-  };
+  // onChangeTimeRange = (timeRange: any) => {
+  //   console.log('onChangeTimeRange', timeRange);
+  // };
 
   const refreshDashboard = useCallback(() => {
     eventBus.publish(new RefreshEvent());
@@ -70,22 +70,31 @@ export const VideoPanel: React.FC<Props> = ({
     (fieldName: string, timestamp = 0) => {
       console.log(new Date(timestamp));
 
-      const fields = data.series?.[0].fields || [];
-      const targetField = fields.find((field) => field.name === fieldName);
-      const graphTimestampField = fields.find((field) => field.name === VideoDataTableFields.GRAPH_TIMESTAMP);
+      const videoDataTableFields = data.series?.[0].fields || [];
+      const requestedField = videoDataTableFields.find((field) => field.name === fieldName);
+      const graphTimestampField = videoDataTableFields.find((field) => field.name === VideoDataTableFields.GRAPH_TIMESTAMP);
 
-      const targetArray = targetField?.values.toArray() || [];
-      const timestampArray = graphTimestampField?.values.toArray() || [];
+      const requestedValues = requestedField?.values.toArray() || [];
+      const timestampValues = graphTimestampField?.values.toArray() || [];
+
 
       // Return first element of the requested data
       if (timestamp === 0) {
-        return targetArray[0];
+        return requestedValues[0];
       }
 
-      const currentIndex = timestampArray.indexOf(timestamp);
+      const currentIndex = timestampValues.indexOf(timestamp);
 
-      if (currentIndex > -1 && targetArray.length >= currentIndex) {
-        return targetArray[currentIndex];
+      if (currentIndex > -1) {
+        if (requestedValues.length >= currentIndex) {
+          return requestedValues[currentIndex];
+        } else {
+          // If 'currentIndex' is valid but 'targetArray' is smaller, return the last element
+          return requestedValues[requestedValues.length - 1];
+        }
+      } else if (requestedValues.length > 0) {
+        // If timestamp is not found, return the first element
+        return requestedValues[0];
       }
 
       return -1;
@@ -185,25 +194,14 @@ export const VideoPanel: React.FC<Props> = ({
     []
   );
 
-  useEffect(() => {
-    console.log('VideoPanel DATA: ', data);
-    console.log('VideoPanel OPTIONS: ', options);
-    console.log('VideoPanel TIME RANGE: ', timeRange);
-    // const videoReference = videoRef.current;
-    setVideoUrl(getVideoUrlByTimestamp());
-
-    return () => {
-      // videoReference.pause();
-      console.log('VideoPanel unmounted');
-    };
-  }, [data, options, timeRange, getVideoUrlByTimestamp]);
-
   /**
    * Set video time from timestamp panel hover event
    */
   const setCurrentVideoTimeFromTimestampEvent = useCallback(
     (timestamp: number, url = '') => {
-      const seconds = getVideoTimeSecondByTimestamp(timestamp);
+      let seconds = getVideoTimeSecondByTimestamp(timestamp);
+      // Set video time to 0 if timestamp is out of the video time range
+      seconds = seconds < 0 ? 0 : seconds;
 
       if (Boolean(url) && url !== videoUrl) {
         console.log('setVideoUrl', url);
@@ -224,6 +222,27 @@ export const VideoPanel: React.FC<Props> = ({
     },
     [getVideoTimeSecondByTimestamp, videoUrl, pauseVideo, setVideoUrl]
   );
+
+  useEffect(() => {
+    console.log('VideoPanel DATA: ', data);
+    console.log('VideoPanel OPTIONS: ', options);
+    console.log('VideoPanel TIME RANGE: ', timeRange);
+    // const videoReference = videoRef.current;
+
+    const from = timeRange?.from?.toDate()?.getTime() ?? 0;
+    if (from) {
+      setTimestampEvent(from);
+    }
+    setVideoUrl(getVideoUrlByTimestamp(from));
+    setCurrentVideoTimeFromTimestampEvent(from);
+    // Play video when the component is mounted
+    // videoReference.play();
+
+    return () => {
+      // videoReference.pause();
+      console.log('VideoPanel unmounted');
+    };
+  }, [data, options, timeRange, getVideoUrlByTimestamp, setCurrentVideoTimeFromTimestampEvent]);
 
   const handleDataHoverEvent = useCallback(
     async (series: DataFrame | undefined, rowIndex = 0) => {
@@ -246,7 +265,6 @@ export const VideoPanel: React.FC<Props> = ({
           setTimestampEvent(timestamp);
           const url = getVideoUrlByTimestamp(timestamp);
           setCurrentVideoTimeFromTimestampEvent(timestamp, url);
-
         }
       }
     },
@@ -474,65 +492,65 @@ export const VideoPanel: React.FC<Props> = ({
 
   return (
     <div className="video-panel">
-        <div>
-          <video
-            ref={videoRef}
-            src={videoUrl}
-            width={width}
-            height={height / 1.5}
-            controls
-            disablePictureInPicture
-            controlsList="nodownload noplaybackrate"
-            onPlaying={() => setIsMyVideoPlaying(true)}
-            onPause={() => setIsMyVideoPlaying(false)}
-            onEnded={() => onVideoEnded()}
-          />
-          <div className="controls">
-            <Tooltip title="Rewind 10 seconds">
-              <IconButton onClick={rewindTenSeconds} size="large">
-                <Replay10Icon fontSize="inherit" />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={isMyVideoPlaying ? 'Pause video' : 'Play Video'}>
-              <IconButton className="icon-btn" onClick={isMyVideoPlaying ? pauseVideo : playVideo} size="large">
-                {isMyVideoPlaying ? <PauseIcon fontSize="inherit" /> : <PlayArrowIcon fontSize="inherit" />}
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Forward 10 seconds">
-              <IconButton onClick={forwardTenSeconds} size="large">
-                <Forward10TwoToneIcon fontSize="inherit" />
-              </IconButton>
-            </Tooltip>
+      <div>
+        <video
+          ref={videoRef}
+          src={videoUrl}
+          width={width}
+          height={height / 1.5}
+          controls
+          disablePictureInPicture
+          controlsList="nodownload noplaybackrate"
+          onPlaying={() => setIsMyVideoPlaying(true)}
+          onPause={() => setIsMyVideoPlaying(false)}
+          onEnded={() => onVideoEnded()}
+        />
+        <div className="controls">
+          <Tooltip title="Rewind 10 seconds">
+            <IconButton onClick={rewindTenSeconds} size="large">
+              <Replay10Icon fontSize="inherit" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={isMyVideoPlaying ? 'Pause video' : 'Play Video'}>
+            <IconButton className="icon-btn" onClick={isMyVideoPlaying ? pauseVideo : playVideo} size="large">
+              {isMyVideoPlaying ? <PauseIcon fontSize="inherit" /> : <PlayArrowIcon fontSize="inherit" />}
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Forward 10 seconds">
+            <IconButton onClick={forwardTenSeconds} size="large">
+              <Forward10TwoToneIcon fontSize="inherit" />
+            </IconButton>
+          </Tooltip>
 
-            <Tooltip title="Skip to previous mark">
-              <IconButton onClick={skipToPreviousAnnotation} size="large">
-                <SkipPreviousIcon fontSize="inherit" />
-              </IconButton>
-            </Tooltip>
+          <Tooltip title="Skip to previous mark">
+            <IconButton onClick={skipToPreviousAnnotation} size="large">
+              <SkipPreviousIcon fontSize="inherit" />
+            </IconButton>
+          </Tooltip>
 
-            <Tooltip title="Skip to next mark">
-              <IconButton onClick={skipToNextAnnotation} size="large">
-                <SkipNextIcon fontSize="inherit" />
-              </IconButton>
-            </Tooltip>
+          <Tooltip title="Skip to next mark">
+            <IconButton onClick={skipToNextAnnotation} size="large">
+              <SkipNextIcon fontSize="inherit" />
+            </IconButton>
+          </Tooltip>
 
-            <Tooltip title="Add mark">
-              <IconButton
-                color="secondary"
-                onClick={async () => {
-                  const annotation = await createAnnotation(['openvidu']);
-                  if (annotation) {
-                    setAnnotations([...annotations, annotation]);
-                    refreshDashboard();
-                  }
-                }}
-                size="large"
-              >
-                <FlagIcon fontSize="inherit" />
-              </IconButton>
-            </Tooltip>
-          </div>
+          <Tooltip title="Add mark">
+            <IconButton
+              color="secondary"
+              onClick={async () => {
+                const annotation = await createAnnotation(['openvidu']);
+                if (annotation) {
+                  setAnnotations([...annotations, annotation]);
+                  refreshDashboard();
+                }
+              }}
+              size="large"
+            >
+              <FlagIcon fontSize="inherit" />
+            </IconButton>
+          </Tooltip>
         </div>
+      </div>
     </div>
   );
 };
