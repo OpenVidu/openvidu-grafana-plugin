@@ -15,6 +15,7 @@ import Tooltip from '@mui/material/Tooltip';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
 import SkipPreviousIcon from '@mui/icons-material/SkipPrevious';
 import { VideoDataTableFields } from 'types/db';
+import { Menu, MenuItem} from '@mui/material';
 
 interface Props extends PanelProps<VideoOptions> {}
 interface AnnotationData {
@@ -41,6 +42,9 @@ export const VideoPanel: React.FC<Props> = ({
   // onChangeTimeRange,
   eventBus,
 }) => {
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const speedMenuOpen = Boolean(anchorEl);
+
   const [videoUrl, setVideoUrl] = useState('');
   const [timestampEvent, setTimestampEvent] = useState(-1);
 
@@ -50,6 +54,7 @@ export const VideoPanel: React.FC<Props> = ({
 
   const [isMyVideoPlaying, setIsMyVideoPlaying] = useState(false);
   const videoRef: React.MutableRefObject<HTMLVideoElement> = useRef(null as any);
+
 
   // onChangeTimeRange = (timeRange: any) => {
   //   console.log('onChangeTimeRange', timeRange);
@@ -72,11 +77,12 @@ export const VideoPanel: React.FC<Props> = ({
 
       const videoDataTableFields = data.series?.[0].fields || [];
       const requestedField = videoDataTableFields.find((field) => field.name === fieldName);
-      const graphTimestampField = videoDataTableFields.find((field) => field.name === VideoDataTableFields.GRAPH_TIMESTAMP);
+      const graphTimestampField = videoDataTableFields.find(
+        (field) => field.name === VideoDataTableFields.GRAPH_TIMESTAMP
+      );
 
       const requestedValues = requestedField?.values.toArray() || [];
       const timestampValues = graphTimestampField?.values.toArray() || [];
-
 
       // Return first element of the requested data
       if (timestamp === 0) {
@@ -444,6 +450,12 @@ export const VideoPanel: React.FC<Props> = ({
     }
   }, [data.series, progressInterval, videoUrl]);
 
+  const onVideoSpeedChange = useCallback((value: number) => {
+    console.log('new speed value ', value);
+    videoRef.current.playbackRate = value;
+  }, []);
+
+
   // Use the useEffect hook to call handleProgressAnnotation when progressInterval changes
   useEffect(() => {
     if (progressInterval === null && isMyVideoPlaying) {
@@ -506,6 +518,30 @@ export const VideoPanel: React.FC<Props> = ({
           onEnded={() => onVideoEnded()}
         />
         <div className="controls">
+          <IconButton
+            aria-label="more"
+            aria-controls={speedMenuOpen ? 'basic-menu' : undefined}
+            aria-haspopup="true"
+            aria-expanded={speedMenuOpen ? 'true' : undefined}
+            onClick={(ev) => setAnchorEl(ev.currentTarget)}
+          >
+            {videoRef?.current?.playbackRate}x
+          </IconButton>
+          <Menu
+            id="long-menu"
+            MenuListProps={{
+              'aria-labelledby': 'long-button',
+            }}
+            anchorEl={anchorEl}
+            open={speedMenuOpen}
+            onClose={() => setAnchorEl(null)}
+          >
+            {[1, 2,3,5,7,10].map((option) => (
+              <MenuItem key={option} selected={option === videoRef?.current?.playbackRate} value={option} onClick={() => {onVideoSpeedChange(option); setAnchorEl(null)}}>
+                {option}x
+              </MenuItem>
+            ))}
+          </Menu>
           <Tooltip title="Rewind 10 seconds">
             <IconButton onClick={rewindTenSeconds} size="large">
               <Replay10Icon fontSize="inherit" />
