@@ -1,10 +1,6 @@
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrayVector, DataFrame, DataHoverEvent, PanelProps, Vector } from '@grafana/data';
 import { RefreshEvent } from '@grafana/runtime';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Subscription } from 'rxjs';
-import { VideoOptions } from 'types';
-import axios from 'axios';
-import './VideoPanel.css';
 import IconButton from '@mui/material/IconButton';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
@@ -14,22 +10,15 @@ import Replay10Icon from '@mui/icons-material/Replay10';
 import Tooltip from '@mui/material/Tooltip';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
 import SkipPreviousIcon from '@mui/icons-material/SkipPrevious';
-import { VideoDataTableFields } from 'types/db';
 import { Menu, MenuItem } from '@mui/material';
+import { Subscription } from 'rxjs';
+
+import { createAnnotation, AnnotationData, findAnnotation, updateAnnotation } from 'services/RestService';
+import { VideoOptions } from 'types';
+import { VideoDataTableFields } from 'types/db';
+import './VideoPanel.css';
 
 interface Props extends PanelProps<VideoOptions> {}
-interface AnnotationData {
-  id?: number;
-  dashboardUID?: string;
-  isRegion: boolean;
-  time: number;
-  timeEnd: number;
-  tags: string[];
-  dashboardId: number;
-  panelId?: number;
-  text: string;
-  data?: any;
-}
 
 let videoProgressAnnotation: Partial<AnnotationData> = {};
 export const VideoPanel: React.FC<Props> = ({
@@ -77,7 +66,7 @@ export const VideoPanel: React.FC<Props> = ({
     setIsMyVideoPlaying(false);
     clearInterval(videoProgressIntervalId);
     setVideoProgressIntervalId(undefined);
-  }, [videoRef, videoProgressIntervalId]);
+  }, [setIsMyVideoPlaying, videoProgressIntervalId]);
 
   /**
    * Retrieves data by timestamp from the video data table.
@@ -90,21 +79,17 @@ export const VideoPanel: React.FC<Props> = ({
       console.debug(`Invoked getDataByTimestamp with fieldName: '${fieldName}' and timestamp: ${timestamp}`);
 
       const videoDataTableFields = data.series?.[0].fields || [];
-      console.debug(`VideoDataTable Fields: ${videoDataTableFields}`);
-
       const requestedField = videoDataTableFields.find((field) => field.name === fieldName);
-      console.debug('Requested Field:', requestedField);
 
       const graphTimestampField = videoDataTableFields.find(
         (field) => field.name === VideoDataTableFields.GRAPH_TIMESTAMP
       );
-      console.debug('Graph Timestamp Field:', graphTimestampField);
-
 
       const requestedValues = requestedField?.values.toArray() || [];
       const timestampValues = graphTimestampField?.values.toArray() || [];
-      console.debug('Requested Values:', requestedValues);
-      console.debug('Timestamp Values:', timestampValues);
+
+      console.debug(`Requested Field '${fieldName}' values: `, requestedValues);
+      console.debug('Graph Timestamp values: ', timestampValues);
 
       // Return first element of the requested data
       if (timestamp === 0) {
@@ -119,13 +104,27 @@ export const VideoPanel: React.FC<Props> = ({
           console.debug(`Found data with timestamp: ${timestamp} and returning: ${requestedValues[currentIndex]}`);
           return requestedValues[currentIndex];
         } else {
-          console.debug(`Found data with timestamp: ${timestamp} but returning last element: ${requestedValues[requestedValues.length - 1]}`);
+          console.debug(
+            `Found data with timestamp: ${timestamp} but returning last element: ${
+              requestedValues[requestedValues.length - 1]
+            }`
+          );
           // If 'currentIndex' is valid but 'targetArray' is smaller, return the last element
           return requestedValues[requestedValues.length - 1];
         }
       } else if (requestedValues.length > 0) {
-        console.debug('Timestamp not found. Returning first element:', requestedValues[0]);
+        // The current timestamp not found, maybe the timestamp filter starts before the video starts
         // If timestamp is not found, return the first element
+        console.warn(
+          'Timestamp does not match with any video timestamp, maybe the timestamp filter starts before the video starts.'
+        );
+
+        // if(fieldName === VideoDataTableFields.VIDEO_URL && videoUrl !== '') {
+        //   const filteredRequestedValues = requestedValues.filter((url) => url !== videoUrl);
+        //   console.debug(`Returning first element from "${fieldName}":`, filteredRequestedValues[0]);
+        //   return filteredRequestedValues[0];
+        // }
+        console.debug(`Returning first element from "${fieldName}":`, requestedValues[0]);
         return requestedValues[0];
       }
 
@@ -166,89 +165,15 @@ export const VideoPanel: React.FC<Props> = ({
    * @param {number} timestamp - The timestamp to retrieve the video time from.
    * @returns {number} - The video time in seconds.
    */
-  const getVideoTimeSecondByTimestamp = useCallback(
-    (timestamp = 0) => getDataByTimestamp(VideoDataTableFields.VIDEO_TIME_SECONDS, timestamp),
-    [getDataByTimestamp]
-  );
+  // const getVideoTimeSecondByTimestamp = (timestamp = 0) =>
+  //   getDataByTimestamp(VideoDataTableFields.VIDEO_TIME_SECONDS, timestamp);
 
   /**
    * Retrieves the video URL based on the given timestamp.
    * @param {number} timestamp - The timestamp to retrieve the video URL for.
    * @returns {string} The video URL corresponding to the given timestamp.
    */
-  const getVideoUrlByTimestamp = useCallback(
-    (timestamp = 0) => getDataByTimestamp(VideoDataTableFields.VIDEO_URL, timestamp),
-    [getDataByTimestamp]
-  );
-
-  /**
-   * Creates an annotation with the specified tags.
-   *
-   * @param tags - The tags associated with the annotation.
-   * @returns A promise that resolves to a partial annotation data object.
-   */
-  const createAnnotation = useCallback(
-    async (tags: string[]): Promise<Partial<AnnotationData>> => {
-      const currentTimestamp = getTimestampByVideoTimeSecond(Math.trunc(videoRef.current.currentTime), videoUrl);
-
-      const url = '/api/annotations';
-      const headers = {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      };
-      const annotationData: AnnotationData = {
-        // dashboardUID: '2xkhR8Y4k', If dashboardUID is not specified, general annotation is created
-        isRegion: false,
-        time: timestampEvent === -1 ? currentTimestamp : timestampEvent,
-        timeEnd: timestampEvent === -1 ? currentTimestamp : timestampEvent,
-        tags,
-        dashboardId: 1,
-        // panelId: 10,
-        text: `Annontation ${tags[0]}`,
-        data: { videoUrl },
-      };
-      try {
-        const response = await axios.post(url, annotationData, { headers });
-        annotationData.id = response.data.id;
-        return annotationData;
-      } catch (error) {
-        console.log('error', error);
-        return {};
-      }
-    },
-    [timestampEvent, videoUrl, getTimestampByVideoTimeSecond]
-  );
-
-  /**
-   * Updates an annotation with the provided data.
-   *
-   * @param annotation - The partial annotation data to update.
-   * @param time - The time value for the annotation.
-   * @returns A promise that resolves to the updated partial annotation data, or undefined if an error occurs.
-   */
-  const updateAnnotation = useCallback(
-    async (annotation: Partial<AnnotationData>, time: number): Promise<Partial<AnnotationData> | undefined> => {
-      const url = `/api/annotations/${annotation.id}`;
-      const headers = {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      };
-      const annotationData: Partial<AnnotationData> = {
-        time,
-        timeEnd: time,
-        text: annotation.text,
-        tags: annotation.tags,
-      };
-      try {
-        await axios.put(url, annotationData, { headers });
-        return annotationData;
-      } catch (error) {
-        console.log('error', error);
-        return undefined;
-      }
-    },
-    []
-  );
+  // const getVideoUrlByTimestamp = (timestamp = 0) => getDataByTimestamp(VideoDataTableFields.VIDEO_URL, timestamp);
 
   /**
    * Sets the current video time based on a timestamp event.
@@ -262,55 +187,40 @@ export const VideoPanel: React.FC<Props> = ({
    * @param url - The new video URL (optional).
    */
   const setCurrentVideoTimeFromTimestampEvent = useCallback(
-    (timestamp: number, url = '') => {
-      let seconds = getVideoTimeSecondByTimestamp(timestamp);
+    (timestamp: number, newUrl = '') => {
       // Set video time to 0 if timestamp is out of the video time range
-      seconds = seconds < 0 ? 0 : seconds;
 
-      if (Boolean(url) && url !== videoUrl) {
-        console.log('setVideoUrl', url);
-        pauseVideo();
-        setVideoUrl(url);
+      const videoTime = Math.max(0, getDataByTimestamp(VideoDataTableFields.VIDEO_TIME_SECONDS, timestamp));
+
+      if (Boolean(newUrl) && newUrl !== videoUrl) {
+        console.debug(`Video URL "${videoUrl}" is different from current video URL "${newUrl}". Changing it ...`);
+
+        if (isMyVideoPlaying) {
+          console.debug('Pausing video ...');
+          pauseVideo();
+        }
+        setVideoUrl(newUrl);
 
         videoRef.current.addEventListener(
           'loadedmetadata',
           () => {
-            videoRef.current.currentTime = seconds;
+            console.debug(`Setting video url to: ${newUrl} ...`);
+            console.debug(`Setting video time to: ${videoTime} ...`);
+            videoRef.current.currentTime = videoTime;
             videoRef.current?.play();
           },
           { once: true }
         );
       } else {
-        videoRef.current.currentTime = seconds;
+        console.warn(
+          newUrl ? `Video new url is the same than current video url: ${newUrl}` : 'New video new url is empty'
+        );
+        console.debug(`Setting video time to: ${videoTime} ...`);
+        videoRef.current.currentTime = videoTime;
       }
     },
-    [getVideoTimeSecondByTimestamp, videoUrl, pauseVideo, setVideoUrl]
+    [videoUrl, isMyVideoPlaying, pauseVideo, setVideoUrl, videoRef, getDataByTimestamp]
   );
-
-  useEffect(() => {
-    console.log('Video panel DATA received: ', data);
-    console.debug('Video panel OPTIONS received: ', options);
-    console.debug('Video panel TIME RANGE: ', timeRange);
-    // const videoReference = videoRef.current;
-
-    const from = timeRange?.from?.toDate()?.getTime() ?? 0;
-    console.debug('Video panel TIMESTAMP (from timeRange):', from);
-
-    if (from) {
-      setTimestampEvent(from);
-    }
-    const videoUrl = getVideoUrlByTimestamp(from);
-    console.debug('Setting VIDEO URL to: ', videoUrl);
-    setVideoUrl(videoUrl);
-    setCurrentVideoTimeFromTimestampEvent(from);
-    // Play video when the component is mounted
-    // videoReference.play();
-
-    return () => {
-      // videoReference.pause();
-      console.debug('VideoPanel unmounted');
-    };
-  }, [data, options, timeRange, getVideoUrlByTimestamp, setCurrentVideoTimeFromTimestampEvent]);
 
   /**
    * Handles the data hover event.
@@ -337,18 +247,246 @@ export const VideoPanel: React.FC<Props> = ({
 
         if (timestamp) {
           setTimestampEvent(timestamp);
-          const url = getVideoUrlByTimestamp(timestamp);
+          const url = getDataByTimestamp(VideoDataTableFields.VIDEO_URL, timestamp);
+          // const url = getVideoUrlByTimestamp(timestamp);
           setCurrentVideoTimeFromTimestampEvent(timestamp, url);
         }
       }
     },
-    [setCurrentVideoTimeFromTimestampEvent, getVideoUrlByTimestamp]
+    [setTimestampEvent, setCurrentVideoTimeFromTimestampEvent, getDataByTimestamp]
   );
+
+  /**
+   * Moves the video playback forward by 10 seconds.
+   */
+  const forwardTenSeconds = () => {
+    const newTime = videoRef.current.currentTime + 10;
+    const fields = data.series?.[0].fields || [];
+    if (newTime > videoRef.current.duration) {
+      // Video time is greater than video duration, we need to go to the next video
+      const secondsToAddToNextVideo = newTime - videoRef.current.duration;
+      const videoUrls = fields.find((field) => field.name === VideoDataTableFields.VIDEO_URL)?.values.toArray() || [];
+      const uniqueVideoUrlsArray = videoUrls.filter((url, index, self) => self.indexOf(url) === index);
+      const currentVideoUrlIndex = uniqueVideoUrlsArray.findIndex((url) => url === videoUrl);
+      const nextVideoUrl = uniqueVideoUrlsArray[currentVideoUrlIndex + 1];
+      if (nextVideoUrl) {
+        setVideoUrl(nextVideoUrl);
+        videoRef.current.addEventListener(
+          'loadedmetadata',
+          () => {
+            videoRef.current.currentTime = secondsToAddToNextVideo;
+            clearInterval(videoProgressIntervalId);
+            setVideoProgressIntervalId(undefined);
+            videoRef.current?.play();
+          },
+          { once: true }
+        );
+      } else {
+        videoRef.current.currentTime = videoRef.current.duration;
+      }
+    } else {
+      videoRef.current.currentTime = newTime;
+    }
+  };
+
+  /**
+   * Rewinds the video by ten seconds.
+   */
+  const rewindTenSeconds = () => {
+    const newTime = videoRef.current.currentTime - 10;
+    const fields = data.series?.[0].fields || [];
+    if (newTime < 0) {
+      // Video time is less than 0, we need to go to the previous video
+      const videoUrls = fields.find((field) => field.name === VideoDataTableFields.VIDEO_URL)?.values.toArray() || [];
+      const uniqueVideoUrlsArray = videoUrls.filter((url, index, self) => self.indexOf(url) === index);
+      const currentVideoUrlIndex = uniqueVideoUrlsArray.findIndex((url) => url === videoUrl);
+      const previousVideoUrl = uniqueVideoUrlsArray[currentVideoUrlIndex - 1];
+      if (previousVideoUrl) {
+        setVideoUrl(previousVideoUrl);
+        videoRef.current.addEventListener(
+          'loadedmetadata',
+          () => {
+            videoRef.current.currentTime = videoRef.current.duration + newTime;
+            clearInterval(videoProgressIntervalId);
+            setVideoProgressIntervalId(undefined);
+            videoRef.current?.play();
+          },
+          { once: true }
+        );
+      } else {
+        videoRef.current.currentTime = 0;
+      }
+    } else {
+      videoRef.current.currentTime = videoRef.current.currentTime - 10;
+    }
+  };
+
+  /**
+   * Skips to the next annotation in the video.
+   */
+  const skipToNextAnnotation = () => {
+    const currentVideoTimestamp =
+      videoProgressAnnotation?.time || getTimestampByVideoTimeSecond(Math.trunc(videoRef.current.currentTime));
+    const nextAnnotation = annotations.find((annotation) =>
+      annotation.time ? annotation.time > currentVideoTimestamp : false
+    );
+    if (nextAnnotation?.time) {
+      setCurrentVideoTimeFromTimestampEvent(nextAnnotation.time, nextAnnotation.data?.videoUrl);
+    }
+  };
+
+  /**
+   * Skips to the previous annotation in the video panel.
+   */
+  const skipToPreviousAnnotation = () => {
+    const currentVideoTimestamp =
+      videoProgressAnnotation?.time || getTimestampByVideoTimeSecond(Math.trunc(videoRef.current.currentTime));
+
+    const filteredAnnotations = annotations.filter((annotation) =>
+      annotation.time ? annotation.time < currentVideoTimestamp : false
+    );
+    const previousAnnotation: Partial<AnnotationData> | undefined = filteredAnnotations.pop();
+
+    if (previousAnnotation?.time) {
+      setCurrentVideoTimeFromTimestampEvent(previousAnnotation.time, previousAnnotation.data?.videoUrl);
+    }
+  };
+
+  /**
+   * This method used to update the video progress annotation when the video is playing
+   * And to clear the interval when the video is paused
+   */
+  const handleProgressAnnotation = useCallback(() => {
+    const isTimerRunning = videoProgressIntervalId !== null;
+
+    if (!isTimerRunning) {
+      const interval: NodeJS.Timeout = setInterval(async () => {
+        console.log(videoUrl);
+        const currentVideoTimestamp = getTimestampByVideoTimeSecond(Math.trunc(videoRef.current.currentTime), videoUrl);
+        const annotation = await updateAnnotation(videoProgressAnnotation, currentVideoTimestamp);
+        videoProgressAnnotation.time = annotation?.time;
+        refreshDashboard();
+      }, REFRESH_INTERVAL_MS);
+      setVideoProgressIntervalId(interval);
+    }
+  }, [videoProgressIntervalId, getTimestampByVideoTimeSecond, videoUrl, refreshDashboard]);
+
+  /**
+   * Plays the video and handles the progress annotation.
+   */
+  const playVideo = async () => {
+    videoRef.current?.play();
+    setIsMyVideoPlaying(true);
+
+    if (Object.keys(videoProgressAnnotation).length === 0) {
+      const currentTimestamp = getTimestampByVideoTimeSecond(Math.trunc(videoRef.current.currentTime), videoUrl);
+      const data: AnnotationData = {
+        // dashboardUID: '2xkhR8Y4k', If dashboardUID is not specified, general annotation is created
+        isRegion: false,
+        time: timestampEvent === -1 ? currentTimestamp : timestampEvent,
+        timeEnd: timestampEvent === -1 ? currentTimestamp : timestampEvent,
+        tags: ['progress'],
+        dashboardId: 1,
+        // panelId: 10,
+        text: `Annontation progress`,
+        data: { videoUrl },
+      };
+      videoProgressAnnotation = await createAnnotation(data);
+    }
+    handleProgressAnnotation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  };
+
+  /**
+   * Callback function triggered when a video ends.
+   */
+  const onVideoEnded = () => {
+    const fields = data.series?.[0].fields || [];
+    const videoUrls = fields.find((field) => field.name === VideoDataTableFields.VIDEO_URL)?.values.toArray() || [];
+    const uniqueVideoUrlsArray = videoUrls.filter((url, index, self) => self.indexOf(url) === index);
+    const currentVideoUrlIndex = uniqueVideoUrlsArray.indexOf(videoUrl);
+
+    if (currentVideoUrlIndex >= 0 && uniqueVideoUrlsArray[currentVideoUrlIndex + 1]) {
+      // If there is a next video, play it
+      const nextVideoUrl = uniqueVideoUrlsArray[currentVideoUrlIndex + 1];
+      setVideoUrl(nextVideoUrl);
+      videoRef.current.currentTime = 0;
+      videoRef.current.addEventListener(
+        'loadedmetadata',
+        () => {
+          console.debug('Loaded video metadata', nextVideoUrl);
+          clearInterval(videoProgressIntervalId);
+          setVideoProgressIntervalId(undefined);
+          videoRef.current?.play();
+        },
+        { once: true }
+      );
+    }
+  };
+
+  const onVideoSpeedChange = (value: number) => {
+    console.log('new speed value ', value);
+    videoRef.current.playbackRate = value;
+  };
+
+  const addMark = async () => {
+    const currentTimestamp = getTimestampByVideoTimeSecond(Math.trunc(videoRef.current.currentTime), videoUrl);
+
+    const data: AnnotationData = {
+      // dashboardUID: '2xkhR8Y4k', If dashboardUID is not specified, general annotation is created
+      isRegion: false,
+      time: timestampEvent === -1 ? currentTimestamp : timestampEvent,
+      timeEnd: timestampEvent === -1 ? currentTimestamp : timestampEvent,
+      tags: ['openvidu'],
+      dashboardId: 1,
+      // panelId: 10,
+      text: `Annontation openvidu`,
+      data: { videoUrl },
+    };
+
+    const annotation = await createAnnotation(data);
+    if (annotation) {
+      setAnnotations([...annotations, annotation]);
+      refreshDashboard();
+    }
+  };
+
+  useEffect(() => {
+    console.warn('USE EFFECT VIDEO PANEL');
+    console.log('Video panel DATA received: ', data);
+    console.debug('Video panel OPTIONS received: ', options);
+    console.debug('Video panel TIME RANGE: ', timeRange);
+    // const videoReference = videoRef.current;
+
+    const from = timeRange?.from?.toDate()?.getTime() ?? 0;
+    console.debug(`Video panel TIMESTAMP (from timeRange): ${from} | ${new Date(from)}`);
+
+    // console.error('VIDEO URL: ', videoUrl);
+    if (Boolean(from)) {
+      console.debug('Setting TIMESTAMP EVENT to: ', from);
+      setTimestampEvent(from);
+    }
+    console.debug(`Setting VIDEO URL by timestamp: ${from} ...`);
+    const newVideoUrl = getDataByTimestamp(VideoDataTableFields.VIDEO_URL, from);
+    // const newVideoUrl = getVideoUrlByTimestamp(from);
+    console.debug('Set VIDEO URL to: ', newVideoUrl);
+    setVideoUrl(newVideoUrl);
+    setCurrentVideoTimeFromTimestampEvent(from);
+
+    // Play video when the component is mounted
+    // videoReference.play();
+
+    return () => {
+      // videoReference.pause();
+      console.debug('VideoPanel unmounted');
+    };
+  }, [data, options, timeRange, getDataByTimestamp, setCurrentVideoTimeFromTimestampEvent]);
 
   /**
    * Subscribe to all necessary dashboard events
    */
   useEffect(() => {
+    console.warn('USE EFFECT SUBSCRIBE TO EVENTS');
     const subs = new Subscription();
     // const subscriber = eventBus.getStream(RefreshEvent).subscribe(event => {
     //   console.log(`Received event: ${event.type}`);
@@ -380,195 +518,21 @@ export const VideoPanel: React.FC<Props> = ({
     };
   }, [eventBus, handleDataHoverEvent]);
 
-  /**
-   * Moves the video playback forward by 10 seconds.
-   */
-  const forwardTenSeconds = useCallback(() => {
-    const newTime = videoRef.current.currentTime + 10;
-    const fields = data.series?.[0].fields || [];
-    if (newTime > videoRef.current.duration) {
-      // Video time is greater than video duration, we need to go to the next video
-      const secondsToAddToNextVideo = newTime - videoRef.current.duration;
-      const videoUrls = fields.find((field) => field.name === VideoDataTableFields.VIDEO_URL)?.values.toArray() || [];
-      const uniqueVideoUrlsArray = videoUrls.filter((url, index, self) => self.indexOf(url) === index);
-      const currentVideoUrlIndex = uniqueVideoUrlsArray.findIndex((url) => url === videoUrl);
-      const nextVideoUrl = uniqueVideoUrlsArray[currentVideoUrlIndex + 1];
-      if (nextVideoUrl) {
-        setVideoUrl(nextVideoUrl);
-        videoRef.current.addEventListener(
-          'loadedmetadata',
-          () => {
-            videoRef.current.currentTime = secondsToAddToNextVideo;
-            clearInterval(videoProgressIntervalId);
-            setVideoProgressIntervalId(undefined);
-            videoRef.current?.play();
-          },
-          { once: true }
-        );
-      } else {
-        videoRef.current.currentTime = videoRef.current.duration;
-      }
-    } else {
-      videoRef.current.currentTime = newTime;
-    }
-  }, [videoRef, data, videoUrl, videoProgressIntervalId, setVideoUrl]);
-
-  /**
-   * Rewinds the video by ten seconds.
-   */
-  const rewindTenSeconds = useCallback(() => {
-    const newTime = videoRef.current.currentTime - 10;
-    const fields = data.series?.[0].fields || [];
-    if (newTime < 0) {
-      // Video time is less than 0, we need to go to the previous video
-      const videoUrls = fields.find((field) => field.name === VideoDataTableFields.VIDEO_URL)?.values.toArray() || [];
-      const uniqueVideoUrlsArray = videoUrls.filter((url, index, self) => self.indexOf(url) === index);
-      const currentVideoUrlIndex = uniqueVideoUrlsArray.findIndex((url) => url === videoUrl);
-      const previousVideoUrl = uniqueVideoUrlsArray[currentVideoUrlIndex - 1];
-      if (previousVideoUrl) {
-        setVideoUrl(previousVideoUrl);
-        videoRef.current.addEventListener(
-          'loadedmetadata',
-          () => {
-            videoRef.current.currentTime = videoRef.current.duration + newTime;
-            clearInterval(videoProgressIntervalId);
-            setVideoProgressIntervalId(undefined);
-            videoRef.current?.play();
-          },
-          { once: true }
-        );
-      } else {
-        videoRef.current.currentTime = 0;
-      }
-    } else {
-      videoRef.current.currentTime = videoRef.current.currentTime - 10;
-    }
-  }, [videoRef, data, videoUrl, videoProgressIntervalId, setVideoUrl]);
-
-  /**
-   * Skips to the next annotation in the video.
-   */
-  const skipToNextAnnotation = useCallback(() => {
-    const currentVideoTimestamp =
-      videoProgressAnnotation?.time || getTimestampByVideoTimeSecond(Math.trunc(videoRef.current.currentTime));
-    const nextAnnotation = annotations.find((annotation) =>
-      annotation.time ? annotation.time > currentVideoTimestamp : false
-    );
-    if (nextAnnotation?.time) {
-      setCurrentVideoTimeFromTimestampEvent(nextAnnotation.time, nextAnnotation.data?.videoUrl);
-    }
-  }, [getTimestampByVideoTimeSecond, annotations, setCurrentVideoTimeFromTimestampEvent]);
-
-  /**
-   * Skips to the previous annotation in the video panel.
-   */
-  const skipToPreviousAnnotation = useCallback(() => {
-    const currentVideoTimestamp =
-      videoProgressAnnotation?.time || getTimestampByVideoTimeSecond(Math.trunc(videoRef.current.currentTime));
-
-    const filteredAnnotations = annotations.filter((annotation) =>
-      annotation.time ? annotation.time < currentVideoTimestamp : false
-    );
-    const previousAnnotation: Partial<AnnotationData> | undefined = filteredAnnotations.pop();
-
-    if (previousAnnotation?.time) {
-      setCurrentVideoTimeFromTimestampEvent(previousAnnotation.time, previousAnnotation.data?.videoUrl);
-    }
-  }, [annotations, getTimestampByVideoTimeSecond, setCurrentVideoTimeFromTimestampEvent]);
-
-  /**
-   * This method used to update the video progress annotation when the video is playing
-   * And to clear the interval when the video is paused
-   */
-  const handleProgressAnnotation = useCallback(() => {
-    const isTimerRunning = videoProgressIntervalId !== null;
-
-    if (!isTimerRunning) {
-      const interval: NodeJS.Timeout = setInterval(async () => {
-        console.log(videoUrl);
-        const currentVideoTimestamp = getTimestampByVideoTimeSecond(Math.trunc(videoRef.current.currentTime), videoUrl);
-        const annotation = await updateAnnotation(videoProgressAnnotation, currentVideoTimestamp);
-        videoProgressAnnotation.time = annotation?.time;
-        refreshDashboard();
-      }, REFRESH_INTERVAL_MS);
-      setVideoProgressIntervalId(interval);
-    }
-  }, [videoRef, videoProgressIntervalId, updateAnnotation, refreshDashboard, getTimestampByVideoTimeSecond, videoUrl]);
-
-  /**
-   * Plays the video and handles the progress annotation.
-   */
-  const playVideo = useCallback(async () => {
-    videoRef.current?.play();
-    setIsMyVideoPlaying(true);
-
-    if (Object.keys(videoProgressAnnotation).length === 0) {
-      videoProgressAnnotation = await createAnnotation(['progress']);
-    }
-    handleProgressAnnotation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoRef, createAnnotation, handleProgressAnnotation, videoProgressAnnotation]);
-
-  /**
-   * Callback function triggered when a video ends.
-   */
-  const onVideoEnded = useCallback(() => {
-    const fields = data.series?.[0].fields || [];
-    const videoUrls = fields.find((field) => field.name === VideoDataTableFields.VIDEO_URL)?.values.toArray() || [];
-    const uniqueVideoUrlsArray = videoUrls.filter((url, index, self) => self.indexOf(url) === index);
-    const currentVideoUrlIndex = uniqueVideoUrlsArray.indexOf(videoUrl);
-
-    if (currentVideoUrlIndex >= 0 && uniqueVideoUrlsArray[currentVideoUrlIndex + 1]) {
-      // If there is a next video, play it
-      const nextVideoUrl = uniqueVideoUrlsArray[currentVideoUrlIndex + 1];
-      setVideoUrl(nextVideoUrl);
-      videoRef.current.currentTime = 0;
-      videoRef.current.addEventListener(
-        'loadedmetadata',
-        () => {
-          console.log('LOADED METADATA', nextVideoUrl);
-          clearInterval(videoProgressIntervalId);
-          setVideoProgressIntervalId(undefined);
-          videoRef.current?.play();
-        },
-        { once: true }
-      );
-    }
-  }, [data.series, videoProgressIntervalId, videoUrl]);
-
-  const onVideoSpeedChange = useCallback((value: number) => {
-    console.log('new speed value ', value);
-    videoRef.current.playbackRate = value;
-  }, []);
-
   // Use the useEffect hook to call handleProgressAnnotation when progressInterval changes
   useEffect(() => {
-    if (videoProgressIntervalId === null && isMyVideoPlaying) {
+    console.warn('USE EFFECT', isMyVideoPlaying, videoProgressIntervalId);
+    if (isMyVideoPlaying && !videoProgressIntervalId) {
+      //TODO: Check this method!
       handleProgressAnnotation();
     }
   }, [videoProgressIntervalId, handleProgressAnnotation, isMyVideoPlaying]);
 
-  const findAnnotation = useCallback(async (): Promise<AnnotationData[]> => {
-    const url = '/api/annotations';
-    const headers = {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    };
-
-    try {
-      const response = await axios.get(url, { headers });
-      return response.data;
-    } catch (error) {
-      console.log('error', error);
-      return [];
-    }
-  }, []);
-
   /**
    * Load annotations on component mount
+   * TODO: este metodo provoca render
    */
   useEffect(() => {
-    findAnnotation().then((annotations) => {
+    findAnnotation().then((annotations: AnnotationData[]) => {
       videoProgressAnnotation = annotations.find((annotation) => annotation.tags.includes('progress')) || {};
       setAnnotations(annotations);
     });
@@ -576,7 +540,7 @@ export const VideoPanel: React.FC<Props> = ({
     return () => {
       setAnnotations([]);
     };
-  }, [findAnnotation, videoProgressIntervalId]);
+  }, [setAnnotations]);
 
   /**
    * Delete video progress annotation on component unmount
@@ -585,7 +549,7 @@ export const VideoPanel: React.FC<Props> = ({
     return () => {
       clearInterval(videoProgressIntervalId);
     };
-  }, [videoProgressIntervalId]);
+  });
 
   return (
     <div className="video-panel">
@@ -664,17 +628,7 @@ export const VideoPanel: React.FC<Props> = ({
           </Tooltip>
 
           <Tooltip title="Add mark">
-            <IconButton
-              color="secondary"
-              onClick={async () => {
-                const annotation = await createAnnotation(['openvidu']);
-                if (annotation) {
-                  setAnnotations([...annotations, annotation]);
-                  refreshDashboard();
-                }
-              }}
-              size="large"
-            >
+            <IconButton color="secondary" onClick={addMark} size="large">
               <FlagIcon fontSize="inherit" />
             </IconButton>
           </Tooltip>
