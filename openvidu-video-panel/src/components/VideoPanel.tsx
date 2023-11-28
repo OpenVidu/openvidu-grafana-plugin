@@ -161,21 +161,6 @@ export const VideoPanel: React.FC<Props> = ({
   );
 
   /**
-   * Retrieves the video time in seconds based on the given timestamp.
-   * @param {number} timestamp - The timestamp to retrieve the video time from.
-   * @returns {number} - The video time in seconds.
-   */
-  // const getVideoTimeSecondByTimestamp = (timestamp = 0) =>
-  //   getDataByTimestamp(VideoDataTableFields.VIDEO_TIME_SECONDS, timestamp);
-
-  /**
-   * Retrieves the video URL based on the given timestamp.
-   * @param {number} timestamp - The timestamp to retrieve the video URL for.
-   * @returns {string} The video URL corresponding to the given timestamp.
-   */
-  // const getVideoUrlByTimestamp = (timestamp = 0) => getDataByTimestamp(VideoDataTableFields.VIDEO_URL, timestamp);
-
-  /**
    * Sets the current video time based on a timestamp event.
    * If the timestamp is out of the video time range, the video time is set to 0.
    * If a new video URL is provided and it is different from the current video URL,
@@ -189,8 +174,14 @@ export const VideoPanel: React.FC<Props> = ({
   const setCurrentVideoTimeFromTimestampEvent = useCallback(
     (timestamp: number, newUrl = '') => {
       // Set video time to 0 if timestamp is out of the video time range
-
       const videoTime = Math.max(0, getDataByTimestamp(VideoDataTableFields.VIDEO_TIME_SECONDS, timestamp));
+
+      const loadedMetadataHandler = () => {
+        console.debug(`Setting video url to: ${newUrl} ...`);
+        console.debug(`Setting video time to: ${videoTime} ...`);
+        videoRef.current.currentTime = videoTime;
+        videoRef.current.play().catch((error) => console.error('Error playing video:', error));
+      };
 
       if (Boolean(newUrl) && newUrl !== videoUrl) {
         console.debug(`Video URL "${videoUrl}" is different from current video URL "${newUrl}". Changing it ...`);
@@ -199,18 +190,11 @@ export const VideoPanel: React.FC<Props> = ({
           console.debug('Pausing video ...');
           pauseVideo();
         }
+
+        console.debug(`Setting video url to: ${newUrl} ...`);
         setVideoUrl(newUrl);
 
-        videoRef.current.addEventListener(
-          'loadedmetadata',
-          () => {
-            console.debug(`Setting video url to: ${newUrl} ...`);
-            console.debug(`Setting video time to: ${videoTime} ...`);
-            videoRef.current.currentTime = videoTime;
-            videoRef.current?.play();
-          },
-          { once: true }
-        );
+        videoRef.current.addEventListener('loadedmetadata', loadedMetadataHandler, { once: true });
       } else {
         console.warn(
           newUrl ? `Video new url is the same than current video url: ${newUrl}` : 'New video new url is empty'
@@ -218,6 +202,11 @@ export const VideoPanel: React.FC<Props> = ({
         console.debug(`Setting video time to: ${videoTime} ...`);
         videoRef.current.currentTime = videoTime;
       }
+
+      return () => {
+        // Cleanup loadedmetadata event listener
+        videoRef.current.removeEventListener('loadedmetadata', loadedMetadataHandler);
+      };
     },
     [videoUrl, isMyVideoPlaying, pauseVideo, setVideoUrl, videoRef, getDataByTimestamp]
   );
@@ -248,7 +237,6 @@ export const VideoPanel: React.FC<Props> = ({
         if (timestamp) {
           setTimestampEvent(timestamp);
           const url = getDataByTimestamp(VideoDataTableFields.VIDEO_URL, timestamp);
-          // const url = getVideoUrlByTimestamp(timestamp);
           setCurrentVideoTimeFromTimestampEvent(timestamp, url);
         }
       }
@@ -357,11 +345,10 @@ export const VideoPanel: React.FC<Props> = ({
    * And to clear the interval when the video is paused
    */
   const handleProgressAnnotation = useCallback(() => {
-    const isTimerRunning = videoProgressIntervalId !== null;
+    const isTimerRunning = videoProgressIntervalId !== undefined;
 
     if (!isTimerRunning) {
       const interval: NodeJS.Timeout = setInterval(async () => {
-        console.log(videoUrl);
         const currentVideoTimestamp = getTimestampByVideoTimeSecond(Math.trunc(videoRef.current.currentTime), videoUrl);
         const annotation = await updateAnnotation(videoProgressAnnotation, currentVideoTimestamp);
         videoProgressAnnotation.time = annotation?.time;
@@ -394,7 +381,6 @@ export const VideoPanel: React.FC<Props> = ({
       videoProgressAnnotation = await createAnnotation(data);
     }
     handleProgressAnnotation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   };
 
   /**
@@ -429,7 +415,7 @@ export const VideoPanel: React.FC<Props> = ({
     videoRef.current.playbackRate = value;
   };
 
-  const addMark = async () => {
+  const addAnnotation = async () => {
     const currentTimestamp = getTimestampByVideoTimeSecond(Math.trunc(videoRef.current.currentTime), videoUrl);
 
     const data: AnnotationData = {
@@ -458,20 +444,18 @@ export const VideoPanel: React.FC<Props> = ({
     console.debug('Video panel TIME RANGE: ', timeRange);
     // const videoReference = videoRef.current;
 
-    const from = timeRange?.from?.toDate()?.getTime() ?? 0;
-    console.debug(`Video panel TIMESTAMP (from timeRange): ${from} | ${new Date(from)}`);
+    const fromTimestamp = timeRange?.from?.toDate()?.getTime() ?? 0;
+    console.debug(`Video panel TIMESTAMP (from timeRange): ${fromTimestamp} | ${new Date(fromTimestamp)}`);
 
-    // console.error('VIDEO URL: ', videoUrl);
-    if (Boolean(from)) {
-      console.debug('Setting TIMESTAMP EVENT to: ', from);
-      setTimestampEvent(from);
+    if (Boolean(fromTimestamp)) {
+      console.debug('Setting TIMESTAMP EVENT to: ', fromTimestamp);
+      setTimestampEvent(fromTimestamp);
     }
-    console.debug(`Setting VIDEO URL by timestamp: ${from} ...`);
-    const newVideoUrl = getDataByTimestamp(VideoDataTableFields.VIDEO_URL, from);
-    // const newVideoUrl = getVideoUrlByTimestamp(from);
+    console.debug(`Setting VIDEO URL by timestamp: ${fromTimestamp} ...`);
+    const newVideoUrl = getDataByTimestamp(VideoDataTableFields.VIDEO_URL, fromTimestamp);
     console.debug('Set VIDEO URL to: ', newVideoUrl);
     setVideoUrl(newVideoUrl);
-    setCurrentVideoTimeFromTimestampEvent(from);
+    setCurrentVideoTimeFromTimestampEvent(fromTimestamp);
 
     // Play video when the component is mounted
     // videoReference.play();
@@ -480,7 +464,8 @@ export const VideoPanel: React.FC<Props> = ({
       // videoReference.pause();
       console.debug('VideoPanel unmounted');
     };
-  }, [data, options, timeRange, getDataByTimestamp, setCurrentVideoTimeFromTimestampEvent]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, options, timeRange, getDataByTimestamp , setCurrentVideoTimeFromTimestampEvent]);
 
   /**
    * Subscribe to all necessary dashboard events
@@ -628,7 +613,7 @@ export const VideoPanel: React.FC<Props> = ({
           </Tooltip>
 
           <Tooltip title="Add mark">
-            <IconButton color="secondary" onClick={addMark} size="large">
+            <IconButton color="secondary" onClick={addAnnotation} size="large">
               <FlagIcon fontSize="inherit" />
             </IconButton>
           </Tooltip>
