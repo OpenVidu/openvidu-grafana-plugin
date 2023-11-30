@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 
 export interface AnnotationData {
   id?: number;
@@ -60,7 +60,7 @@ export const getAnnotationsByTag = async (tag: string): Promise<AnnotationData[]
     console.log('error', error);
     return [];
   }
-}
+};
 
 /**
  * Updates an annotation with the provided data.
@@ -90,5 +90,26 @@ export const updateAnnotation = async (
   } catch (error) {
     console.log('error', error);
     return {};
+  }
+};
+
+export const deleteAnnotations = async (annotations: Array<Partial<AnnotationData>>): Promise<void> => {
+  const promises: Array<Promise<AxiosResponse>> = [];
+  console.debug('deleteAnnotations', annotations);
+  annotations.forEach(async (annotation) => {
+    if (!annotation?.id) {
+      return;
+    }
+    const url = `/api/annotations/${annotation.id}`;
+    const headers = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    };
+    promises.push(axios.delete(url, { headers }));
+  });
+  try {
+    await Promise.all(promises);
+  } catch (error) {
+    console.log('error', error);
   }
 };

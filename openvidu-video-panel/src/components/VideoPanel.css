@@ -26,3 +26,14 @@ video::-webkit-media-controls-toggle-closed-captions-button,
 video::-webkit-media-controls-volume-slider {
   display: none;
 }
+
+
+.annotation-icon {
+  rotate: 90deg;
+}
+.annotation-icon.add {
+  color: #cfc24b;
+}
+.annotation-icon.delete {
+  color: #cf4b4b;
+}
