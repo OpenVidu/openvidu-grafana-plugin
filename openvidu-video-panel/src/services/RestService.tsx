@@ -35,7 +35,7 @@ export const createAnnotation = async (data: AnnotationData): Promise<Partial<An
   }
 };
 
-export const findAnnotation = async (): Promise<AnnotationData[]> => {
+export const getAnnotations = async (): Promise<AnnotationData[]> => {
   const url = '/api/annotations';
   const headers = {
     Accept: 'application/json',
@@ -51,6 +51,17 @@ export const findAnnotation = async (): Promise<AnnotationData[]> => {
   }
 };
 
+export const getAnnotationsByTag = async (tag: string): Promise<AnnotationData[]> => {
+  try {
+    const response = await getAnnotations();
+    const filteredAnnotaions = response.filter((annotation) => annotation.tags.includes(tag));
+    return filteredAnnotaions || [];
+  } catch (error) {
+    console.log('error', error);
+    return [];
+  }
+}
+
 /**
  * Updates an annotation with the provided data.
  *
@@ -61,7 +72,7 @@ export const findAnnotation = async (): Promise<AnnotationData[]> => {
 export const updateAnnotation = async (
   annotation: Partial<AnnotationData>,
   time: number
-): Promise<Partial<AnnotationData> | undefined> => {
+): Promise<Partial<AnnotationData>> => {
   const url = `/api/annotations/${annotation.id}`;
   const headers = {
     Accept: 'application/json',
@@ -78,6 +89,6 @@ export const updateAnnotation = async (
     return annotationData;
   } catch (error) {
     console.log('error', error);
-    return undefined;
+    return {};
   }
 };
