@@ -1,0 +1,108 @@
+<html>
+
+<head>
+	<title>OpenVidu RTSP Application</title>
+
+	<meta name="viewport" content="width=device-width, initial-scale=1"
+		charset="utf-8">
+	<link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
+
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+
+	<link rel="styleSheet" href="style.css" type="text/css" media="screen">
+	<script src="openvidu-browser-2.29.0.js"></script>
+	<script src="app.js"></script>
+	<!-- <script>
+		$(document).ready(function () {
+			$('[data-toggle="tooltip"]').tooltip({
+				html: true
+			});
+		});
+	</script> -->
+</head>
+
+<body>
+
+
+
+	<nav class="navbar navbar-default">
+		<div class="container">
+			<div class="navbar-header">
+				<a class="navbar-brand" href="/">
+					<img class="demo-logo"
+						src="images/openvidu_vert_white_bg_trans_cropped.png" />
+				</a>
+			</div>
+		</div>
+	</nav>
+
+	<div id="main-container" class="container">
+
+		<div id="form-container" class="vertical-center">
+			<h1>RTSP Cameras </h1>
+			<form id="application-form" onsubmit="subscribe(); return false;">
+
+				<div class="row g-3">
+					<div class="col">
+						<label for="cameraUsername" class="form-label">Camera
+							username</label>
+					<input type="text" class="form-control" id="cameraUsername" placeholder="username">
+					<div class="form-text">The RTSP protocol
+						needs credentials for getting the video</div>
+					</div>
+					<div class="col">
+						<label for="cameraPassword"
+						class="form-label">Camera Password</label>
+					<input type="text" class="form-control" id="cameraPassword" placeholder="password">
+					<div class="form-text">The RTSP protocol
+						needs credentials for getting the video</div>
+					</div>
+				</div>
+
+				<hr>
+<!--
+				<h3>Recording</h3>
+
+				<label for="recordingDuration" class="form-label">Recording Duration (seconds)</label>
+				<input type="number" id="recordingDuration" class="form-control" value="10">
+				<div id="recordingDurationHelpBlock" class="form-text">
+				The duration of each recording in seconds.
+				</div>
+
+				<hr>
+
+				<h3>Data</h3>
+
+				<p>The application will generate synthetic data. The data will be stored in the MySQL data base with the time frequency selected.</p>
+
+				<select  id="dataIntervalSelect" class="form-select">
+					<option value="0">Generate data</option>
+					<option value="1">Each second</option>
+					<option value="5">Each 5 seconds</option>
+					<option value="10" selected>Each 10 seconds</option>
+					<option value="30">Each 30 seconds</option>
+					<option value="45">Each 45 seconds</option>
+					<option value="60">Each minute</option>
+					<option value="180">Each 3 minutes</option>
+					<option value="300">Each 5 minutes</option>
+					<option value="600">Each 10 minutes</option>
+					<option value="900">Each 15 minutes</option>
+				</select>
+				<br> -->
+
+				<button type="submit" id="subscribe-btn" class="btn btn-primary">Subscribe to cameras</button>
+			</form>
+
+			<button onclick="unsubscribe()" class="btn btn-danger"
+				id="unsubscribe-btn" disabled>Stop and Disconnect</button>
+
+		</div>
+
+		<div id="cameras-container" class="cameras-container"></div>
+	</div>
+
+</body>
+
+
+</html>

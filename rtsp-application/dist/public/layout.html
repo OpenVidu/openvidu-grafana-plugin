@@ -1,0 +1,28 @@
+<html>
+
+<head><script src="openvidu-browser-2.29.0.min.js"></script></head>
+
+<body>
+    <div id="videos"></div>
+</body>
+
+<script>
+    var url = new URL(window.location.href);
+    var SESSION_ID = url.searchParams.get("sessionId");
+    var SECRET = url.searchParams.get("secret");
+    // WARNING! Use "ws://" as protocol instead of "wss://" if you are using
+    // the OpenVidu dev container (openvidu/openvidu-dev) through localhost
+    var TOKEN = 'ws://' + location.host + '?sessionId=' + SESSION_ID + '&secret=' + SECRET + '&recorder=true';
+
+    var OV = new OpenVidu();
+    var session = OV.initSession();
+
+    session.on("streamCreated", (event) => {
+        session.subscribe(event.stream, 'videos');
+    });
+    session.connect(TOKEN)
+        .then(() => { console.log('Recorder participant connected') })
+        .catch(error => { console.error(error) });
+</script>
+
+</html>

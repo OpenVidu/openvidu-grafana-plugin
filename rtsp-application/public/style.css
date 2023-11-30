@@ -1,0 +1,277 @@
+form {
+    display: inline-block;
+}
+
+.cameras {
+    margin-top: 50px;
+}
+
+.camera-name {
+    text-align: center;
+    margin-top: 30px;
+    margin-bottom: 10px;
+}
+
+.video-container {
+    position: relative;
+    text-align: center;
+}
+
+video {
+    width: 50%;
+}
+
+.loader {
+    border: 16px solid #f3f3f3;
+    border-top: 16px solid #0088aa;
+    border-radius: 50%;
+    width: 100px;
+    height: 100px;
+    animation: spin 2s linear infinite;
+    position: absolute;
+    left: calc(50% - 66px);
+    top: calc(50% - 66px);
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+
+
+html {
+	position: relative;
+	min-height: 100%;
+}
+
+body {
+	min-height: 100%;
+}
+
+nav {
+	height: 50px;
+	width: 100%;
+	z-index: 1;
+	background-color: #4d4d4d !important;
+	border-color: #4d4d4d !important;
+	border-top-right-radius: 0 !important;
+	border-top-left-radius: 0 !important;
+}
+
+.navbar-header {
+	width: 100%;
+}
+
+.nav-icon {
+	padding: 5px 15px 5px 15px;
+	float: right;
+}
+
+nav a {
+	color: #ccc !important;
+}
+
+nav i.fa {
+	font-size: 40px;
+	color: #ccc;
+}
+
+nav a:hover {
+	color: #a9a9a9 !important;
+}
+
+nav i.fa:hover {
+	color: #a9a9a9;
+}
+
+#main-container {
+	padding-top: 10px;
+}
+
+.vertical-center {
+	width: -webkit-fit-content;
+	width: fit-content;
+	margin: auto;
+}
+
+.vertical-center#not-logged form {
+	width: -moz-fit-content;
+	margin: auto;
+}
+
+.vertical-center#not-logged table {
+	width: -moz-fit-content;
+	margin: auto;
+}
+
+.vertical-center table {
+	margin-top: 3em !important;
+}
+
+.horizontal-center {
+	margin: 0 auto;
+}
+
+.form-control {
+	color: #0088aa;
+	font-weight: bold;
+}
+
+.form-control:focus {
+	border-color: #0088aa;
+	-webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075), 0 0 8px rgba(0, 136, 170, 0.6);
+	box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075), 0 0 8px rgba(0, 136, 170, 0.6);
+}
+
+input.btn {
+	font-weight: bold;
+}
+
+
+
+
+
+.openvidu-logo {
+	height: 35px;
+	float: right;
+	margin: 12px 0;
+	-webkit-transition: all 0.1s ease-in-out;
+	-moz-transition: all 0.1s ease-in-out;
+	-o-transition: all 0.1s ease-in-out;
+	transition: all 0.1s ease-in-out;
+}
+
+.openvidu-logo:hover {
+	-webkit-filter: grayscale(0.5);
+	filter: grayscale(0.5);
+}
+
+.demo-logo {
+	margin: 0;
+	height: 22px;
+	float: left;
+	padding-right: 8px;
+}
+
+a:hover .demo-logo {
+	-webkit-filter: brightness(0.7);
+	filter: brightness(0.7);
+}
+
+#form {
+	padding-top: 40px;
+}
+
+#not-logged {
+	padding-top: 40px;
+}
+
+#form-dialog h1 {
+	color: #4d4d4d;
+	font-weight: bold;
+	text-align: center;
+}
+
+#form-dialog label {
+	color: #0088aa;
+}
+
+#form-dialog input.btn {
+	margin-top: 15px;
+}
+
+#form-dialog hr {
+	background: #4d4d4d;
+}
+
+#img-div {
+	text-align: center;
+	padding-bottom: 3em;
+}
+
+#img-div img {
+	height: 15%;
+}
+
+#logged {
+	width: 100%;
+}
+
+#form {
+	max-width: 700px;
+	margin: auto;
+	margin-top: 100px;
+}
+
+
+
+
+#video-container {
+	width: 100%;
+	max-height: 42%;
+	display: block;
+	overflow: hidden;
+}
+
+#video-container video.two {
+	max-width: 50%;
+}
+
+#video-container video.three {
+	max-width: 33.33%;
+}
+
+#video-container video.four {
+	max-width: 25%;
+}
+
+#video-container div {
+	position: absolute;
+	display: inline-flex;
+	margin-left: calc(-50% + 15px);
+}
+
+#video-container p {
+	display: inline-block;
+	background: #f8f8f8;
+	padding-left: 5px;
+	padding-right: 5px;
+	color: #777777;
+	font-weight: bold;
+	border-bottom-right-radius: 4px;
+}
+
+#video-container p.userName {
+	float: right;
+	border-bottom-left-radius: 4px;
+	border-bottom-right-radius: 0px;
+	font-weight: lighter;
+	font-size: 12px;
+	background: #777777;
+	color: #f8f8f8;
+}
+
+video {
+	width: 100%;
+    object-fit: scale-down;
+}
+
+
+.cameras-container {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+  }
+
+  .video-container {
+	flex: 0 49%;
+  }
+
+
+
