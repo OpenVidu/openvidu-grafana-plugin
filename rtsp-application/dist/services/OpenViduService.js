@@ -40,13 +40,14 @@ exports.OpenViduService = void 0;
 var openvidu_node_client_1 = require("openvidu-node-client");
 var config_1 = require("../config");
 var DBService_1 = require("./DBService");
-var dbService = DBService_1.DBService.getInstance();
 var OpenViduService = /** @class */ (function () {
     function OpenViduService() {
         this.cameraConnections = [];
         this.ipCameras = [];
         this.recording = null;
         this.recordingTimeout = null;
+        this.dbService = DBService_1.DBService.getInstance();
+        console.log('Creating OpenViduService instance...');
         this.openvidu = new openvidu_node_client_1.OpenVidu(config_1.OPENVIDU_URL, config_1.OPENVIDU_SECRET);
         if (process.env.NODE_ENV === 'production')
             this.openvidu.enableProdMode();
@@ -220,14 +221,14 @@ var OpenViduService = /** @class */ (function () {
                         if (!(config_1.DATA_GENERATION_STATUS === 'ENABLED')) return [3 /*break*/, 5];
                         videoUrl = this.getCurrentRecordingUrl();
                         // Start generating data once the recording is started
-                        dbService.startDataGenerationWithInterval(this.recording.createdAt, videoUrl);
+                        this.dbService.startDataGenerationWithInterval(this.recording.createdAt, videoUrl);
                         // Insert first video data
-                        return [4 /*yield*/, dbService.insertVideoData(this.recording.createdAt, 0, videoUrl)];
+                        return [4 /*yield*/, this.dbService.insertVideoData(this.recording.createdAt, 0, videoUrl)];
                     case 3:
                         // Insert first video data
                         _b.sent();
                         // Insert first metric data
-                        return [4 /*yield*/, dbService.insertMetricData(this.recording.createdAt)];
+                        return [4 /*yield*/, this.dbService.insertMetricData(this.recording.createdAt)];
                     case 4:
                         // Insert first metric data
                         _b.sent();

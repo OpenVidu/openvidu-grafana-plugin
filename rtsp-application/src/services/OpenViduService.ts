@@ -21,7 +21,6 @@ import {
 } from '../config';
 import { DBService } from './DBService';
 
-const dbService = DBService.getInstance();
 
 
 export class OpenViduService {
@@ -32,8 +31,10 @@ export class OpenViduService {
 	private ipCameras: { name: string; uri: string }[] = [];
 	private recording: Recording | null = null;
 	private recordingTimeout: NodeJS.Timeout | null = null;
+	private dbService: DBService = DBService.getInstance();
 
 	private constructor() {
+		console.log('Creating OpenViduService instance...');
 		this.openvidu = new OpenVidu(OPENVIDU_URL, OPENVIDU_SECRET);
 		if (process.env.NODE_ENV === 'production') this.openvidu.enableProdMode();
 		this.ipCameras = RTSP_CAMERAS_URLS.split(',').map((uri, index) => {
@@ -144,13 +145,13 @@ export class OpenViduService {
 			if (DATA_GENERATION_STATUS === 'ENABLED') {
 				const videoUrl = this.getCurrentRecordingUrl();
 				// Start generating data once the recording is started
-				dbService.startDataGenerationWithInterval(this.recording.createdAt, videoUrl);
+				this.dbService.startDataGenerationWithInterval(this.recording.createdAt, videoUrl);
 
 				// Insert first video data
-				await dbService.insertVideoData(this.recording.createdAt, 0, videoUrl);
+				await this.dbService.insertVideoData(this.recording.createdAt, 0, videoUrl);
 
 				// Insert first metric data
-				await dbService.insertMetricData(this.recording.createdAt);
+				await this.dbService.insertMetricData(this.recording.createdAt);
 			}
 
 			this.recordingTimeout = setTimeout(async () => {

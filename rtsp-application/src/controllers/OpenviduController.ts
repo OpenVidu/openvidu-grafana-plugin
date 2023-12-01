@@ -3,10 +3,10 @@ import { Request, Response } from 'express';
 import { OpenViduService } from '../services/OpenViduService';
 import { OpenViduRole, Session } from 'openvidu-node-client';
 import { DATA_GENERATION_STATUS, MODE, SESSION_NAME } from '../config';
-import { DBService } from '../services/DBService';
+// import { DBService } from '../services/DBService';
 
 const openviduService = OpenViduService.getInstance();
-const dbService = DBService.getInstance();
+// const dbService = DBService.getInstance();
 
 export const app = express.Router({
 	strict: true

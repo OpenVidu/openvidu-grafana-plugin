@@ -41,9 +41,9 @@ var express = require("express");
 var OpenViduService_1 = require("../services/OpenViduService");
 var openvidu_node_client_1 = require("openvidu-node-client");
 var config_1 = require("../config");
-var DBService_1 = require("../services/DBService");
+// import { DBService } from '../services/DBService';
 var openviduService = OpenViduService_1.OpenViduService.getInstance();
-var dbService = DBService_1.DBService.getInstance();
+// const dbService = DBService.getInstance();
 exports.app = express.Router({
     strict: true
 });

@@ -7,7 +7,7 @@ exports.OPENVIDU_URL = process.env.OPENVIDU_URL || 'http://localhost:4443/';
 exports.OPENVIDU_SECRET = process.env.OPENVIDU_SECRET || 'MY_SECRET';
 exports.SESSION_NAME = process.env.SESSION_NAME || 'RTSP_Session';
 // RTSP Cameras configuration
-exports.RTSP_CAMERAS_URLS = process.env.RTSP_CAMERAS_URLS || 'rtsp://192.168.1.37/stream1,rtsp://192.168.1.37/stream2';
+exports.RTSP_CAMERAS_URLS = process.env.RTSP_CAMERAS_URLS || 'rtsp://192.168.1.36/stream1';
 exports.RTSP_CAMERA_USERNAME = process.env.RTSP_CAMERA_USERNAME || 'openvidu';
 exports.RTSP_CAMERA_PASSWORD = process.env.RTSP_CAMERA_PASSWORD || 'openvidu';
 // AUTO: The recording will start automatically once the server is up
@@ -21,7 +21,7 @@ exports.RECORDING_DURATION_SECONDS = process.env.RECORDING_DURATION_SECONDS || 1
 exports.DATA_GENERATION_STATUS = process.env.DATA_GENERATION_STATUS || 'ENABLED';
 exports.DATA_GENERATION_INTERVAL_SECONDS = process.env.DATA_GENERATION_INTERVAL_SECONDS || 5;
 // Database configuration. Only if DATA_GENERATION_STATUS is ENABLED
-exports.DB_HOSTNAME = process.env.DB_HOSTNAME || '172.21.0.2';
+exports.DB_HOSTNAME = process.env.DB_HOSTNAME || '172.22.0.2';
 exports.DB_USERNAME = process.env.DB_USERNAME || 'root';
 exports.DB_PASSWORD = process.env.DB_PASSWORD || 'password';
 exports.DB_NAME = process.env.DB_NAME || 'grafana_db';

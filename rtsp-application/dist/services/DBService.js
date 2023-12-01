@@ -45,6 +45,14 @@ var DBService = /** @class */ (function () {
         this.databaseInterval = null;
         this.videoTableQuery = "CREATE TABLE IF NOT EXISTS " + config_1.DB_VIDEO_TABLE + " (\n\t\tid INT NOT NULL AUTO_INCREMENT ,\n\t\tgraph_timestamp DATETIME,\n\t\tvideo_time_seconds INT,\n\t\tvideo_url TEXT,\n\t\tPRIMARY KEY (id)\n\t)";
         this.metricTableQuery = "CREATE TABLE IF NOT EXISTS " + config_1.DB_METRIC_TABLE + " (\n\t\tid INT NOT NULL AUTO_INCREMENT,\n\t\tgraph_timestamp DATETIME,\n\t\tvalue INT,\n\t\tPRIMARY KEY (id)\n\t)";
+        var connectionOptions = {
+            host: config_1.DB_HOSTNAME,
+            user: config_1.DB_USERNAME,
+            password: config_1.DB_PASSWORD,
+            database: config_1.DB_NAME,
+            insecureAuth: true
+        };
+        console.log('Creating DBService instance...', connectionOptions);
         this.mysqlConnection = mysql.createConnection({
             host: config_1.DB_HOSTNAME,
             user: config_1.DB_USERNAME,
