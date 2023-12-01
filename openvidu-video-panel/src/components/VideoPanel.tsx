@@ -43,8 +43,6 @@ export const VideoPanel: React.FC<Props> = ({
 
   // Property which makes possible to open/close the menu (speed playback video menu)
   const [speedMenuContent, setSpeedMenuContent] = React.useState<null | HTMLElement>(null);
-  // Property which stores the timestamp of the hover event
-  const [timestampEvent, setTimestampEvent] = useState(-1);
   // Property which stores the annotations mark of the time series panel
   const [markAnnotations, setMarkAnnotations] = useState<Array<Partial<AnnotationData>>>([]);
   // Property which stores the progress annotation of the video
@@ -252,6 +250,7 @@ export const VideoPanel: React.FC<Props> = ({
         url: videoState.url,
         forcedTime: newTime,
         speedPlayback: videoRef.current.playbackRate,
+        play: !videoRef.current?.paused,
       });
       newTimestamp = getTimestampByVideoTimeSecond(newTime, videoState.url);
     }
@@ -346,7 +345,8 @@ export const VideoPanel: React.FC<Props> = ({
   };
 
   /**
-   * Updates the video progress annotation.
+   * Updates the video progress annotation. It also updates the timestampEvent.
+   * @param time - The time in milliseconds.
    */
   const updateProgressAnnotation = useCallback(
     (time: number) => {
@@ -415,13 +415,12 @@ export const VideoPanel: React.FC<Props> = ({
         // const value = valueArray.get(rowIndex);
 
         if (timestamp) {
-          setTimestampEvent(timestamp);
           const url = getDataByTimestamp(VideoDataTableFields.VIDEO_URL, timestamp);
           updateVideoCurrentTime(timestamp, url);
         }
       }
     },
-    [setTimestampEvent, updateVideoCurrentTime, getDataByTimestamp]
+    [updateVideoCurrentTime, getDataByTimestamp]
   );
 
   /**
@@ -465,20 +464,28 @@ export const VideoPanel: React.FC<Props> = ({
     }
   };
 
+  /**
+   * Handles the time update event of the video.
+   *
+   * If the video is paused, it checks if the timestampEvent is between the first and last video timestamp. If so, it updates the progress annotation.
+   *
+   *
+   * @param event - The time update event object.
+   */
   const onVideoTimeUpdate = async (event: any) => {
-    if (videoRef.current.paused) {
-      console.debug('Video time update', event);
-      const firstVideoTimestamp = getDataByTimestamp(VideoDataTableFields.GRAPH_TIMESTAMP);
-      const lastVideoTimestamp = getDataByTimestamp(VideoDataTableFields.GRAPH_TIMESTAMP, Infinity);
-      if (
-        timestampEvent >= firstVideoTimestamp &&
-        timestampEvent <= lastVideoTimestamp &&
-        progressAnnotation.time !== timestampEvent
-      ) {
-        updateProgressAnnotation(timestampEvent);
-        refreshDashboard();
-      }
-    }
+    // if (videoRef.current.paused) {
+    //   console.debug('Video time update', event);
+    //   const firstVideoTimestamp = getDataByTimestamp(VideoDataTableFields.GRAPH_TIMESTAMP);
+    //   const lastVideoTimestamp = getDataByTimestamp(VideoDataTableFields.GRAPH_TIMESTAMP, Infinity);
+    //   if (
+    //     timestampEvent >= firstVideoTimestamp &&
+    //     timestampEvent <= lastVideoTimestamp &&
+    //     progressAnnotation.time !== timestampEvent
+    //   ) {
+    //     updateProgressAnnotation(timestampEvent);
+    //     refreshDashboard();
+    //   }
+    // }
   };
 
   const onVideoSpeedChange = (value: number) => {
@@ -492,7 +499,6 @@ export const VideoPanel: React.FC<Props> = ({
 
   const addMarkAnnotation = async () => {
     const currentTimestamp = getTimestampByVideoTimeSecond(Math.trunc(videoRef.current.currentTime), videoState.url);
-    console.log('timestamp event', timestampEvent);
 
     const data: AnnotationData = {
       // dashboardUID: '2xkhR8Y4k', If dashboardUID is not specified, general annotation is created
@@ -529,7 +535,7 @@ export const VideoPanel: React.FC<Props> = ({
         videoRef.current.currentTime = videoState.forcedTime;
       }
 
-      if (videoState.speedPlayback) {
+      if (videoState.speedPlayback !== videoRef.current.playbackRate) {
         console.debug('Setting video speed playback to: ', videoState.speedPlayback);
         videoRef.current.playbackRate = videoState.speedPlayback;
       }
@@ -561,11 +567,6 @@ export const VideoPanel: React.FC<Props> = ({
 
     const fromTimestamp = timeRange?.from?.toDate()?.getTime() ?? 0;
     console.debug(`Video panel TIMESTAMP (from timeRange): ${fromTimestamp} | ${new Date(fromTimestamp)}`);
-
-    if (Boolean(fromTimestamp)) {
-      console.debug('Setting TIMESTAMP EVENT to: ', fromTimestamp);
-      setTimestampEvent(fromTimestamp);
-    }
     console.debug(`Setting VIDEO URL by timestamp: ${fromTimestamp} ...`);
     const newVideoUrl = getDataByTimestamp(VideoDataTableFields.VIDEO_URL, fromTimestamp);
     console.debug('Set VIDEO URL to: ', newVideoUrl);
