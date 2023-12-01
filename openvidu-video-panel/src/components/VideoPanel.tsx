@@ -631,14 +631,16 @@ export const VideoPanel: React.FC<Props> = ({
       const pAnnotation: AnnotationData | {} =
         annotations.filter((a) => a.tags.includes(AnnotationTag.PROGRESS))[0] || {};
 
+      const fromTimestampFilter = timeRange?.from?.toDate()?.getTime();
       const firstVideoTimestamp = getDataByTimestamp(VideoDataTableFields.GRAPH_TIMESTAMP);
+      const annotationTime = fromTimestampFilter || firstVideoTimestamp;
 
       if (Object.keys(pAnnotation).length > 0) {
         console.debug('Video progress annotation found: ', pAnnotation);
-        (pAnnotation as AnnotationData).time = firstVideoTimestamp;
-        (pAnnotation as AnnotationData).timeEnd = firstVideoTimestamp;
+        (pAnnotation as AnnotationData).time = annotationTime;
+        (pAnnotation as AnnotationData).timeEnd = annotationTime;
         (pAnnotation as AnnotationData).data = { videoUrl: videoState.url };
-        await updateAnnotation(pAnnotation, firstVideoTimestamp);
+        await updateAnnotation(pAnnotation, annotationTime);
         setProgressAnnotation(pAnnotation);
       } else {
         console.debug('Video progress annotation not found. Creating it ...');
@@ -669,7 +671,7 @@ export const VideoPanel: React.FC<Props> = ({
       setMarkAnnotations([]);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [timeRange]);
 
   return (
     <div className="video-panel">
