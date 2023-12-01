@@ -216,7 +216,13 @@ export const VideoPanel: React.FC<Props> = ({
         speedPlayback: videoRef.current.playbackRate,
         play: !videoRef.current?.paused,
       });
+
+      // TODO: It should update the progress annotation here but many errors appear when request for updating the annotaiton.
+      // {"type":"cancelled","cancelled":true,"data":null,"status":-1,"statusText":"Request was aborted"
+      // TODO: Check the newest version of grafana to see if this error is fixed
+      // updateProgressAnnotation(timestamp);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [videoRef, videoState.url, setVideoState, getTimestampByVideoTimeSecond]
   );
 
@@ -306,17 +312,13 @@ export const VideoPanel: React.FC<Props> = ({
         (annotation) => annotation.time && annotation.time > currentVideoTimestamp
       );
 
-      if (nextAnnotation?.time) {
-        // Check if the annotation is between the video time range
-        const firstTimestamp = getDataByTimestamp(VideoDataTableFields.GRAPH_TIMESTAMP);
-        const lastTimestamp = getDataByTimestamp(VideoDataTableFields.GRAPH_TIMESTAMP, Infinity);
-        const isAnnotationBetweenVideoTimeRange =
-          nextAnnotation.time >= firstTimestamp && nextAnnotation.time <= lastTimestamp;
-
-        if (isAnnotationBetweenVideoTimeRange && nextAnnotation.data?.videoUrl) {
-          updateVideoCurrentTime(nextAnnotation.time, nextAnnotation.data?.videoUrl);
-          updateProgressAnnotation(nextAnnotation.time);
-        }
+      if (
+        nextAnnotation?.time &&
+        nextAnnotation.data?.videoUrl &&
+        isTimestampBetweenVideoTimeRange(nextAnnotation.time)
+      ) {
+        updateVideoCurrentTime(nextAnnotation.time, nextAnnotation.data?.videoUrl);
+        updateProgressAnnotation(nextAnnotation.time);
       }
     }
   };
@@ -343,6 +345,24 @@ export const VideoPanel: React.FC<Props> = ({
       }
     }
   };
+
+  /**
+   * Checks if a given timestamp is between the first and last timestamps in the video time range.
+   * @param timestamp The timestamp to check.
+   * @returns True if the timestamp is between the first and last timestamps, false otherwise.
+   */
+  const isTimestampBetweenVideoTimeRange = useCallback(
+    (timestamp: number) => {
+      if (!timestamp) {
+        return false;
+      }
+
+      const firstTimestamp = getDataByTimestamp(VideoDataTableFields.GRAPH_TIMESTAMP);
+      const lastTimestamp = getDataByTimestamp(VideoDataTableFields.GRAPH_TIMESTAMP, Infinity);
+      return timestamp >= firstTimestamp && timestamp <= lastTimestamp;
+    },
+    [getDataByTimestamp]
+  );
 
   /**
    * Updates the video progress annotation. It also updates the timestampEvent.
@@ -560,30 +580,40 @@ export const VideoPanel: React.FC<Props> = ({
     setAnnotationProgressIntervalId,
   ]);
 
+  /**
+   * Check if the time range is between the first and last video timestamp.
+   * If so, it updates the video URL and the video current time based on the time range.
+   * If not, it updates the video URL and the video current time based on the first video timestamp.
+   */
   useEffect(() => {
     console.log('Video panel DATA received: ', data);
     console.debug('Video panel OPTIONS received: ', options);
     console.debug('Video panel TIME RANGE: ', timeRange);
 
-    const fromTimestamp = timeRange?.from?.toDate()?.getTime() ?? 0;
-    console.debug(`Video panel TIMESTAMP (from timeRange): ${fromTimestamp} | ${new Date(fromTimestamp)}`);
-    console.debug(`Setting VIDEO URL by timestamp: ${fromTimestamp} ...`);
-    const newVideoUrl = getDataByTimestamp(VideoDataTableFields.VIDEO_URL, fromTimestamp);
-    console.debug('Set VIDEO URL to: ', newVideoUrl);
-    const videoTime = Math.max(0, getDataByTimestamp(VideoDataTableFields.VIDEO_TIME_SECONDS, fromTimestamp));
-    console.debug(`Setting video time to: ${videoTime} ...`);
-    setVideoState({
-      url: newVideoUrl,
-      forcedTime: videoTime,
-      speedPlayback: videoRef.current.playbackRate,
-      play: !videoRef.current?.paused,
-    });
+    const filterFromTimestamp = timeRange?.from?.toDate()?.getTime() ?? 0;
+
+    if (isTimestampBetweenVideoTimeRange(filterFromTimestamp)) {
+      console.debug(
+        `Video panel TIMESTAMP (from timeRange): ${filterFromTimestamp} | ${new Date(filterFromTimestamp)}`
+      );
+      console.debug(`Setting VIDEO URL by timestamp: ${filterFromTimestamp} ...`);
+      const newVideoUrl = getDataByTimestamp(VideoDataTableFields.VIDEO_URL, filterFromTimestamp);
+      console.log('New video url: ', videoRef);
+      updateVideoCurrentTime(filterFromTimestamp, newVideoUrl);
+    } else {
+      const firstVideoTimestamp = getDataByTimestamp(VideoDataTableFields.GRAPH_TIMESTAMP);
+      console.debug('Video panel TIMESTAMP (from timeRange) is not between video timestamps');
+      console.debug(`Setting VIDEO URL by first video timestamp: ${firstVideoTimestamp} ...`);
+      const newVideoUrl = getDataByTimestamp(VideoDataTableFields.VIDEO_URL, firstVideoTimestamp);
+      console.log('New video url: ', videoRef);
+      updateVideoCurrentTime(firstVideoTimestamp, newVideoUrl);
+    }
 
     return () => {
       console.debug('VideoPanel unmounted');
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, options, timeRange, getDataByTimestamp]);
+  }, [timeRange]);
 
   /**
    * Subscribe to all necessary dashboard events
@@ -633,7 +663,9 @@ export const VideoPanel: React.FC<Props> = ({
 
       const fromTimestampFilter = timeRange?.from?.toDate()?.getTime();
       const firstVideoTimestamp = getDataByTimestamp(VideoDataTableFields.GRAPH_TIMESTAMP);
-      const annotationTime = fromTimestampFilter || firstVideoTimestamp;
+      const annotationTime = isTimestampBetweenVideoTimeRange(fromTimestampFilter)
+        ? fromTimestampFilter
+        : firstVideoTimestamp;
 
       if (Object.keys(pAnnotation).length > 0) {
         console.debug('Video progress annotation found: ', pAnnotation);
@@ -648,8 +680,8 @@ export const VideoPanel: React.FC<Props> = ({
         const data: AnnotationData = {
           // dashboardUID: '2xkhR8Y4k', If dashboardUID is not specified, general annotation is created
           isRegion: false,
-          time: firstVideoTimestamp, // TODO: this should check if there is a time filter and use the first timestamp of the filter
-          timeEnd: firstVideoTimestamp, // TODO: this should check if there is a time filter and use the first timestamp of the filter
+          time: annotationTime,
+          timeEnd: annotationTime,
           tags: [AnnotationTag.PROGRESS],
           dashboardId: 1,
           // panelId: 10,
