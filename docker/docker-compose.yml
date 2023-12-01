@@ -38,17 +38,53 @@ services:
       - ../grafana/datasources:/var/lib/grafana/datasources
 
 
-  db_initializer:
-    build:
-      context: ../mysql
-      dockerfile: Dockerfile
-    depends_on:
-      - mysql
-    container_name: db_initializer
-    restart: on-failure
-    environment:
-      - DB_USER=root
-      - DB_PASSWORD=password
-      - DB_HOST=mysql
-      - DB_NAME=grafana_db
-      - VIDEOS_URL=https://s3.eu-west-1.amazonaws.com/public.openvidu.io/bbb_640x480.mkv,https://s3.eu-west-1.amazonaws.com/public.openvidu.io/fakevideo_h264_opus.mkv
+  # openvidu-server:
+  #   image: openvidu/openvidu-dev:2.29.0
+  #   container_name: openvidu-server
+  #   restart: always
+  #   ports:
+  #     - "4443:4443"
+  #   depends_on:
+  #     - mysql
+  #   environment:
+  #     - OPENVIDU_RECORDING=true
+  #     - OPENVIDU_RECORDING_AUTOSTOP_TIMEOUT=0
+  #     - OPENVIDU_RECORDING_PATH=$PWD/recordings
+  #     - OPENVIDU_RECORDING_PUBLIC_ACCESS=true
+  #     - OPENVIDU_WEBHOOK=true
+  #     - OPENVIDU_WEBHOOK_ENDPOINT=rtsp-application/openvidu/webhook
+  #     - OPENVIDU_WEBHOOK_EVENTS=["recordingStatusChanged","sessionCreated"]
+  #   volumes:
+  #     - ./recordings:/recordings
+  #     - /var/run/docker.sock:/var/run/docker.sock
+
+
+  # rtsp-application:
+  #   build:
+  #     context: ../rtsp-application
+  #     dockerfile: Dockerfile
+  #   container_name: rtsp-application
+  #   restart: on-failure
+  #   ports:
+  #     - "5000:5000"
+  #   depends_on:
+  #     - openvidu-server
+  #     - mysql
+  #   environment:
+  #     - SERVER_PORT=5000
+  #     - OPENVIDU_URL=openvidu-server:4443
+  #     - OPENVIDU_SECRET=MY_SECRET
+  #     - SESSION_NAME=RTSP_SESSION
+  #     - RTSP_CAMERAS_URLS=rtsp://192.168.1.41/stream1,rtsp://192.168.1.41/stream2
+  #     - RTSP_CAMERA_USERNAME=openvidu
+  #     - RTSP_CAMERA_PASSWORD=openvidu
+  #     - RTSP_MODE=AUTO
+  #     - RECORDING_DURATION_SECONDS=10
+  #     - DATA_GENERATION_STATUS=ENABLED
+  #     - DATA_GENERATION_INTERVAL_SECONDS=10
+  #     - DB_HOSTNAME=mysql
+  #     - DB_USERNAME=root
+  #     - DB_PASSWORD=password
+  #     - DB_NAME=grafana_db
+  #     - DB_VIDEO_TABLE=video_data
+  #     - DB_METRIC_TABLE=metric_data
