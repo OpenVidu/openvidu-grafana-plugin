@@ -70,7 +70,7 @@ app.listen(config_1.SERVER_PORT, function () { return __awaiter(void 0, void 0, 
                 console.log('RECORDING DURATION (seconds)', text(config_1.RECORDING_DURATION_SECONDS) + 's');
                 console.log('---------------------------------------------------------');
                 console.log(' ');
-                if (!(config_1.MODE === 'AUTO')) return [3 /*break*/, 5];
+                // if (MODE === 'AUTO') {
                 console.log(' ');
                 console.log('---------------------------------------------------------');
                 console.log(' ');
@@ -87,8 +87,7 @@ app.listen(config_1.SERVER_PORT, function () { return __awaiter(void 0, void 0, 
                 error_1 = _a.sent();
                 console.log('Error creating session or publishing cameras', error_1);
                 return [3 /*break*/, 4];
-            case 4: return [3 /*break*/, 5];
-            case 5: return [2 /*return*/];
+            case 4: return [2 /*return*/];
         }
     });
 }); });

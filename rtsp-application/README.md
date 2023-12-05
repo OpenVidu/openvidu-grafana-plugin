@@ -50,7 +50,6 @@ The application can be configured in the [config.ts](./src/config.ts) file.
 | RTSP_CAMERAS_URLS                | 'rtsp://192.168.1.38/stream1' | RTSP Cameras URLs                               |
 | RTSP_CAMERA_USERNAME             | 'openvidu'                    | RTSP Camera username                            |
 | RTSP_CAMERA_PASSWORD             | 'openvidu'                    | RTSP Camera password                            |
-| MODE                             | 'AUTO'                        | Recording mode (AUTO or MANUAL)                 |
 | RECORDING_DURATION_SECONDS       | 15                            | Duration of each recording in seconds           |
 | DATA_GENERATION_STATUS           | 'ENABLED'                     | Status of data generation (ENABLED or DISABLED) |
 | DATA_GENERATION_INTERVAL_SECONDS | 5                             | Interval between data generation in seconds     |

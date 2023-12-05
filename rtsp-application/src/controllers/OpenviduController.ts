@@ -2,7 +2,7 @@ import * as express from 'express';
 import { Request, Response } from 'express';
 import { OpenViduService } from '../services/OpenViduService';
 import { OpenViduRole, Session } from 'openvidu-node-client';
-import { DATA_GENERATION_STATUS, MODE, SESSION_NAME } from '../config';
+import { SESSION_NAME } from '../config';
 // import { DBService } from '../services/DBService';
 
 const openviduService = OpenViduService.getInstance();
