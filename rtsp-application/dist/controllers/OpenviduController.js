@@ -58,7 +58,8 @@ exports.app.post('/token', function (req, res) { return __awaiter(void 0, void 0
                 sessionCreated = _a.sent();
                 return [4 /*yield*/, openviduService.createConnection(sessionCreated, 'manual_viewer', openvidu_node_client_1.OpenViduRole.SUBSCRIBER)];
             case 2:
-                token = (_a.sent()).token;
+                token = (_a.sent())
+                    .token;
                 return [2 /*return*/, res.status(200).json({ token: token })];
             case 3:
                 error_1 = _a.sent();
@@ -80,7 +81,7 @@ exports.app["delete"]('/cameras', function (req, res) { return __awaiter(void 0,
                 return [3 /*break*/, 3];
             case 2:
                 error_2 = _a.sent();
-                console.log("Error disconnecting cameras", error_2);
+                console.log('Error disconnecting cameras', error_2);
                 return [3 /*break*/, 3];
             case 3:
                 res.status(200).send('Cameras disconnected');
@@ -89,10 +90,11 @@ exports.app["delete"]('/cameras', function (req, res) { return __awaiter(void 0,
     });
 }); });
 exports.app.post('/webhook', function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var _a;
+    var _a, error_3;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
+                _b.trys.push([0, 7, 8, 9]);
                 _a = req.body.event;
                 switch (_a) {
                     case 'recordingStatusChanged': return [3 /*break*/, 1];
@@ -150,9 +152,15 @@ exports.app.post('/webhook', function (req, res) { return __awaiter(void 0, void
                     });
                 }); }, 1000);
                 return [3 /*break*/, 6];
-            case 6:
+            case 6: return [3 /*break*/, 9];
+            case 7:
+                error_3 = _b.sent();
+                console.log('Error in webhook', error_3);
+                return [3 /*break*/, 9];
+            case 8:
                 res.status(200).send('Webhook received');
-                return [2 /*return*/];
+                return [7 /*endfinally*/];
+            case 9: return [2 /*return*/];
         }
     });
 }); });

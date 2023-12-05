@@ -93,9 +93,11 @@ app.listen(config_1.SERVER_PORT, function () { return __awaiter(void 0, void 0, 
     });
 }); });
 process.on('SIGINT', function () { return __awaiter(void 0, void 0, void 0, function () {
+    var error_2;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
+                _a.trys.push([0, 4, 5, 6]);
                 console.log(' ');
                 console.log('---------------------------------------------------------');
                 console.log(' ');
@@ -115,8 +117,15 @@ process.on('SIGINT', function () { return __awaiter(void 0, void 0, void 0, func
                 console.log(' ');
                 console.log('---------------------------------------------------------');
                 console.log(' ');
+                return [3 /*break*/, 6];
+            case 4:
+                error_2 = _a.sent();
+                console.log('Error stopping server', error_2);
+                return [3 /*break*/, 6];
+            case 5:
                 process.exit();
-                return [2 /*return*/];
+                return [7 /*endfinally*/];
+            case 6: return [2 /*return*/];
         }
     });
 }); });
