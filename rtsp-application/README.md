@@ -19,7 +19,7 @@ npm install
 2. Build the rtsp-application project:
 
 ```bash
-npm build
+npm run build
 ```
 
 3. Run the rtsp-application project with default configuration:
