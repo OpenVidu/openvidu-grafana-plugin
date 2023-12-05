@@ -6,13 +6,14 @@ services:
     image: mysql:latest
     container_name: mysql
     restart: always
+    ports:
+      - "3306:3306"
     environment:
       - MYSQL_ROOT_PASSWORD=password
       - MYSQL_DATABASE=grafana_db
       - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/openvidu_dashboard.json
     # volumes:
       # - ../mysql:/var/lib/mysql
-
 
   grafana:
     image: grafana/grafana:8.5.22
@@ -38,25 +39,28 @@ services:
       - ../grafana/datasources:/var/lib/grafana/datasources
 
 
-  # openvidu-server:
-  #   image: openvidu/openvidu-dev:2.29.0
-  #   container_name: openvidu-server
-  #   restart: always
-  #   ports:
-  #     - "4443:4443"
-  #   depends_on:
-  #     - mysql
-  #   environment:
-  #     - OPENVIDU_RECORDING=true
-  #     - OPENVIDU_RECORDING_AUTOSTOP_TIMEOUT=0
-  #     - OPENVIDU_RECORDING_PATH=$PWD/recordings
-  #     - OPENVIDU_RECORDING_PUBLIC_ACCESS=true
-  #     - OPENVIDU_WEBHOOK=true
-  #     - OPENVIDU_WEBHOOK_ENDPOINT=rtsp-application/openvidu/webhook
-  #     - OPENVIDU_WEBHOOK_EVENTS=["recordingStatusChanged","sessionCreated"]
-  #   volumes:
-  #     - ./recordings:/recordings
-  #     - /var/run/docker.sock:/var/run/docker.sock
+  openvidu-server:
+    image: openvidu/openvidu-dev:2.29.0
+    container_name: openvidu-server
+    restart: always
+    ports:
+      - "4443:4443"
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Necesita acceder a la red local para poder acceder a la app de RTSP
+    network_mode: "bridge"
+    depends_on:
+      - mysql
+    environment:
+      - OPENVIDU_RECORDING=true
+      - OPENVIDU_RECORDING_AUTOSTOP_TIMEOUT=0
+      - OPENVIDU_RECORDING_PATH=$PWD/rtsp-application/recordings
+      - OPENVIDU_RECORDING_PUBLIC_ACCESS=true
+      - OPENVIDU_WEBHOOK=true
+      - OPENVIDU_WEBHOOK_ENDPOINT=http://host.docker.internal:5000/openvidu/webhook
+      - OPENVIDU_WEBHOOK_EVENTS=["recordingStatusChanged","sessionCreated"]
+    volumes:
+      - ../rtsp-application/recordings:$PWD/rtsp-application/recordings
+      - /var/run/docker.sock:/var/run/docker.sock
 
 
   # rtsp-application:
