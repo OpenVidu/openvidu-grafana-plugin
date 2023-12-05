@@ -189,6 +189,31 @@ export const VideoPanel: React.FC<Props> = ({
   );
 
   /**
+   * Updates the video progress annotation. It also updates the timestampEvent.
+   * @param time - The time in milliseconds.
+   */
+  const updateProgressAnnotation = useCallback(
+    async (time: number, videoUrl: string) => {
+      if (progressAnnotation.time === time && progressAnnotation.data?.videoUrl === videoUrl) {
+        return;
+      }
+      progressAnnotation.time = time;
+      progressAnnotation.timeEnd = time;
+      progressAnnotation.data = { videoUrl };
+      setProgressAnnotation(progressAnnotation);
+      try {
+        await updateAnnotation(progressAnnotation, time);
+      } catch (error) {
+        console.error('Error updating annotation: ', error);
+        console.log('progressAnnotation: ', progressAnnotation);
+      } finally {
+        refreshDashboard();
+      }
+    },
+    [progressAnnotation, refreshDashboard]
+  );
+
+  /**
    * Updates the current time of the video.
    * If the video URL is undefined, it sets the video URL to the current video URL.
    * Calculates the new time based on the given timestamp and the first timestamp of the video.
@@ -220,10 +245,10 @@ export const VideoPanel: React.FC<Props> = ({
       // TODO: It should update the progress annotation here but many errors appear when request for updating the annotaiton.
       // {"type":"cancelled","cancelled":true,"data":null,"status":-1,"statusText":"Request was aborted"
       // TODO: Check the newest version of grafana to see if this error is fixed
-      // updateProgressAnnotation(timestamp);
+      updateProgressAnnotation(timestamp, videoUrl);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [videoRef, videoState.url, setVideoState, getTimestampByVideoTimeSecond]
+    [videoRef, videoState.url, updateProgressAnnotation, setVideoState, getTimestampByVideoTimeSecond]
   );
 
   /**
@@ -233,68 +258,66 @@ export const VideoPanel: React.FC<Props> = ({
     const newTime = Math.trunc(videoRef.current.currentTime + 10);
     const fields = data.series?.[0].fields || [];
     const videoUrls = fields.find((field) => field.name === VideoDataTableFields.VIDEO_URL)?.values.toArray() || [];
-
     const uniqueVideoUrlsArray = [...new Set(videoUrls)];
     const currentVideoUrlIndex = uniqueVideoUrlsArray.indexOf(videoState.url);
     const nextVideoUrl = uniqueVideoUrlsArray[currentVideoUrlIndex + 1];
     const isTimeGreaterThanDuration = newTime > videoRef.current.duration;
-    let newTimestamp;
+    let newVideoUrl;
+    let newTimeSeconds;
 
     if (isTimeGreaterThanDuration) {
-      // Video time is greater than video duration, we need to go to the next video
-      const nextForcedTime = nextVideoUrl ? newTime - videoRef.current.duration : videoRef.current.duration;
-      const newUrl = nextVideoUrl || videoState.url;
-      setVideoState({
-        url: newUrl,
-        forcedTime: nextForcedTime,
-        speedPlayback: videoRef.current.playbackRate,
-        play: !videoRef.current?.paused,
-      });
-      newTimestamp = getTimestampByVideoTimeSecond(nextForcedTime, newUrl);
+      console.debug('Video time is greater than video duration. Going to next video ...');
+      newTimeSeconds = nextVideoUrl ? newTime - videoRef.current.duration : videoRef.current.duration;
+      newVideoUrl = nextVideoUrl || videoState.url;
     } else {
-      setVideoState({
-        url: videoState.url,
-        forcedTime: newTime,
-        speedPlayback: videoRef.current.playbackRate,
-        play: !videoRef.current?.paused,
-      });
-      newTimestamp = getTimestampByVideoTimeSecond(newTime, videoState.url);
+      console.debug('Video time is less than video duration. Forwarding 10 seconds ...');
+      newVideoUrl = videoState.url;
+      newTimeSeconds = newTime;
     }
-    updateProgressAnnotation(newTimestamp);
+
+    setVideoState({
+      url: newVideoUrl,
+      forcedTime: newTimeSeconds,
+      speedPlayback: videoRef.current.playbackRate,
+      play: !videoRef.current?.paused,
+    });
+    const newTimestamp = getTimestampByVideoTimeSecond(newTimeSeconds, newVideoUrl);
+    stopProgressAnnotationUpdate();
+    updateProgressAnnotation(newTimestamp, newVideoUrl);
   };
 
   /**
    * Rewinds the video by ten seconds.
    */
   const rewindTenSeconds = () => {
+    console.debug('Rewinding 10 seconds ...');
     const newTime = Math.trunc(videoRef.current.currentTime - 10);
     const fields = data.series?.[0].fields || [];
-    let newTimestamp;
+    let newVideoUrl;
+    let newTimeSeconds;
     if (newTime < 0) {
-      // Video time is less than 0, we need to go to the previous video
+      console.debug('Video time is less than 0. Going to previous video ...');
       const videoUrls = fields.find((field) => field.name === VideoDataTableFields.VIDEO_URL)?.values.toArray() || [];
       const uniqueVideoUrlsArray = [...new Set(videoUrls)];
       const currentVideoUrlIndex = uniqueVideoUrlsArray.indexOf(videoState.url);
       const previousVideoUrl = uniqueVideoUrlsArray[currentVideoUrlIndex - 1];
-      const forcedTime = previousVideoUrl ? Math.max(0, videoRef.current.duration + newTime) : 0;
-      const newUrl = previousVideoUrl || videoState.url;
-      setVideoState({
-        url: newUrl,
-        forcedTime,
-        speedPlayback: videoRef.current.playbackRate,
-        play: !videoRef.current?.paused,
-      });
-      newTimestamp = getTimestampByVideoTimeSecond(forcedTime, newUrl);
+      newTimeSeconds = previousVideoUrl ? Math.max(0, videoRef.current.duration + newTime) : 0;
+      newVideoUrl = previousVideoUrl || videoState.url;
     } else {
-      setVideoState({
-        url: videoState.url,
-        forcedTime: newTime,
-        speedPlayback: videoRef.current.playbackRate,
-        play: !videoRef.current?.paused,
-      });
-      newTimestamp = getTimestampByVideoTimeSecond(newTime, videoState.url);
+      console.debug('Video time is greater than 0. Rewinding 10 seconds ...');
+      newVideoUrl = videoState.url;
+      newTimeSeconds = newTime;
     }
-    updateProgressAnnotation(newTimestamp);
+
+    setVideoState({
+      url: newVideoUrl,
+      forcedTime: newTimeSeconds,
+      speedPlayback: videoRef.current.playbackRate,
+      play: !videoRef.current?.paused,
+    });
+    const newTimestamp = getTimestampByVideoTimeSecond(newTimeSeconds, newVideoUrl);
+    stopProgressAnnotationUpdate();
+    updateProgressAnnotation(newTimestamp, newVideoUrl);
   };
 
   /**
@@ -318,7 +341,7 @@ export const VideoPanel: React.FC<Props> = ({
         isTimestampBetweenVideoTimeRange(nextAnnotation.time)
       ) {
         updateVideoCurrentTime(nextAnnotation.time, nextAnnotation.data?.videoUrl);
-        updateProgressAnnotation(nextAnnotation.time);
+        updateProgressAnnotation(nextAnnotation.time, nextAnnotation.data?.videoUrl);
       }
     }
   };
@@ -341,7 +364,7 @@ export const VideoPanel: React.FC<Props> = ({
       if (previousAnnotation?.time && previousAnnotation.data?.videoUrl) {
         // setCurrentVideoTimeFromTimestampEvent(previousAnnotation.time, previousAnnotation.data?.videoUrl);
         updateVideoCurrentTime(previousAnnotation.time, previousAnnotation.data?.videoUrl);
-        updateProgressAnnotation(previousAnnotation.time);
+        updateProgressAnnotation(previousAnnotation.time, previousAnnotation.data?.videoUrl);
       }
     }
   };
@@ -365,22 +388,6 @@ export const VideoPanel: React.FC<Props> = ({
   );
 
   /**
-   * Updates the video progress annotation. It also updates the timestampEvent.
-   * @param time - The time in milliseconds.
-   */
-  const updateProgressAnnotation = useCallback(
-    (time: number) => {
-      progressAnnotation.time = time;
-      progressAnnotation.timeEnd = time;
-      progressAnnotation.data = { videoUrl: videoState.url };
-      setProgressAnnotation(progressAnnotation);
-      updateAnnotation(progressAnnotation, time);
-      refreshDashboard();
-    },
-    [progressAnnotation, videoState.url, refreshDashboard]
-  );
-
-  /**
    * This method used to update the video progress annotation when the video is playing
    * And to clear the interval when the video is paused
    */
@@ -392,7 +399,7 @@ export const VideoPanel: React.FC<Props> = ({
           Math.trunc(videoRef.current.currentTime),
           videoState.url
         );
-        updateProgressAnnotation(currentVideoTimestamp);
+        updateProgressAnnotation(currentVideoTimestamp, progressAnnotation.data?.videoUrl);
       }
     }, REFRESH_INTERVAL_MS / videoState.speedPlayback);
   }, [
@@ -568,8 +575,10 @@ export const VideoPanel: React.FC<Props> = ({
           setAnnotationProgressIntervalId(interval);
         }
       } else {
-        console.debug('Pausing video ...');
-        videoRef.current?.pause();
+        if (!videoRef.current?.paused) {
+          console.debug('Pausing video ...');
+          videoRef.current?.pause();
+        }
       }
     }
   }, [
@@ -598,7 +607,6 @@ export const VideoPanel: React.FC<Props> = ({
       );
       console.debug(`Setting VIDEO URL by timestamp: ${filterFromTimestamp} ...`);
       const newVideoUrl = getDataByTimestamp(VideoDataTableFields.VIDEO_URL, filterFromTimestamp);
-      console.log('New video url: ', videoRef);
       updateVideoCurrentTime(filterFromTimestamp, newVideoUrl);
     } else {
       const firstVideoTimestamp = getDataByTimestamp(VideoDataTableFields.GRAPH_TIMESTAMP);
@@ -613,7 +621,7 @@ export const VideoPanel: React.FC<Props> = ({
       console.debug('VideoPanel unmounted');
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRange]);
+  }, [timeRange.raw.from, timeRange.raw.to]);
 
   /**
    * Subscribe to all necessary dashboard events
@@ -699,18 +707,18 @@ export const VideoPanel: React.FC<Props> = ({
     return () => {
       // Restore video progress annotation to the first video timestamp
       const firstVideoTimestamp = getDataByTimestamp(VideoDataTableFields.GRAPH_TIMESTAMP);
-      updateProgressAnnotation(firstVideoTimestamp);
+      const firstVideoUrl = getDataByTimestamp(VideoDataTableFields.VIDEO_URL, firstVideoTimestamp);
+      updateProgressAnnotation(firstVideoTimestamp, firstVideoUrl);
       setMarkAnnotations([]);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRange]);
+  }, [timeRange.raw.from, timeRange.raw.to]);
 
   return (
     <div className="video-panel">
       <div>
         <video
           ref={videoRef}
-          // src={videoState.url}
           width={width}
           height={height / 1.5}
           controls
