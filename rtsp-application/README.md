@@ -73,7 +73,12 @@ export const RTSP_CAMERA_PASSWORD = process.env.RTSP_CAMERA_PASSWORD || 'openvid
 
 The `RTSP_CAMERAS_URLS` parameter enables the configuration of RTSP camera URLs separated by commas. Each camera typically provides two streams: one for high resolution (stream1) and another for low resolution (stream2). Note that the camera's IP address is dynamically assigned by the router, and you must verify it using the TAPO application to correctly set the RTSP cameras URLs.
 
+![Config](../docs/tapo1.png 'RTSP URL')
+
+
 For security, the `RTSP_CAMERA_USERNAME` and `RTSP_CAMERA_PASSWORD` parameters should be configured using the TAPO official application to set the RTSP credentials securely.
+
+![Config credentials](../docs/tapo2.png 'Credentials')
 
 ### Recording
 
