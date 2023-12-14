@@ -54,6 +54,7 @@ The application can be configured in the [config.ts](./src/config.ts) file.
 | DATA_GENERATION_STATUS           | 'ENABLED'                     | Status of data generation (ENABLED or DISABLED) |
 | DATA_GENERATION_INTERVAL_SECONDS | 5                             | Interval between data generation in seconds     |
 | DB_HOSTNAME                      | '0.0.0.0'                     | Database hostname                               |
+| DB_PORT                          | 3306                          | Database port                                   |
 | DB_USERNAME                      | 'root'                        | Database username                               |
 | DB_PASSWORD                      | 'password'                    | Database password                               |
 | DB_NAME                          | 'grafana_db'                  | Database name                                   |
