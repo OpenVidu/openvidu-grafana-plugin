@@ -1,5 +1,5 @@
 
-import { Connection, ConnectionOptions, Pool } from 'mysql2';
+import { Connection } from 'mysql2';
 import * as mysql from 'mysql2';
 
 
@@ -8,6 +8,7 @@ import {
 	DB_USERNAME,
 	DB_PASSWORD,
 	DB_NAME,
+	DB_PORT,
 	DB_VIDEO_TABLE,
 	DB_METRIC_TABLE,
 	DATA_GENERATION_INTERVAL_SECONDS,
@@ -37,6 +38,7 @@ export class DBService {
 		this.mysqlConnection = mysql.createConnection({
 			host: DB_HOSTNAME,
 			user: DB_USERNAME,
+			port: Number(DB_PORT),
 			password: DB_PASSWORD,
 			database: DB_NAME,
 			insecureAuth: true,

@@ -23,6 +23,7 @@ export const DATA_GENERATION_INTERVAL_SECONDS = process.env.DATA_GENERATION_INTE
 
 // Database configuration. Only if DATA_GENERATION_STATUS is ENABLED
 export const DB_HOSTNAME = process.env.DB_HOSTNAME || '0.0.0.0';
+export const DB_PORT = process.env.DB_PORT || 3306;
 export const DB_USERNAME = process.env.DB_USERNAME || 'root';
 export const DB_PASSWORD = process.env.DB_PASSWORD || 'password';
 export const DB_NAME = process.env.DB_NAME || 'grafana_db';
