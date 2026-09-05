@@ -1,5 +1,8 @@
 # openvidu-grafana-plugin
 
+> [!WARNING]
+> **This repository is no longer maintained.**
+
 > WARN: This custom plugin has been only tested with an **unique video player**. It is not tested with multiple video players and it may not work properly.
 
 > WARN: This custom plugin **only works with Time Series Panel**
